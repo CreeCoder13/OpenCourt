@@ -7,6 +7,22 @@ const official = (id: string, title: string, url: string): Source => ({
   publisher: "Supreme Court of Canada",
   url,
   type: "Primary",
+  category: "Judgment",
+  verificationStatus: "Verified",
+  supports: ["Citation", "Decision date", "Court", "Disposition", "Reasons for judgment"],
+  accessedDate: lastVerified,
+});
+
+const encyclopedia = (id: string, title: string, url: string): Source => ({
+  id,
+  title,
+  publisher: "The Canadian Encyclopedia",
+  url,
+  type: "Secondary",
+  category: "Background Explainer",
+  verificationStatus: "Secondary Source",
+  supports: ["Historical background", "Plain-language context"],
+  note: "Background only. The official judgment remains authoritative.",
   accessedDate: lastVerified,
 });
 
@@ -51,7 +67,10 @@ export const cases: CaseRecord[] = [
     indigenousCommunities: ["Nisga’a Nation"],
     indigenousGroup: "First Nations",
     parties: ["Frank Calder and other Nisga’a leaders", "Attorney General of British Columbia"],
-    sources: [official("src-calder-scc", "Calder et al. v Attorney-General of British Columbia", "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/5113/index.do")],
+    sources: [
+      official("src-calder-scc", "Calder et al. v Attorney-General of British Columbia", "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/5113/index.do"),
+      encyclopedia("src-calder-tce", "Calder Case", "https://www.thecanadianencyclopedia.ca/en/article/calder-case"),
+    ],
     relatedCases: [
       { caseSlug: "guerin-v-the-queen-1984", type: "Related", note: "Later clarified the nature of Indigenous interests in land and the Crown’s obligations." },
       { caseSlug: "delgamuukw-v-british-columbia-1997", type: "Expanded", note: "Developed the content and proof of Aboriginal title." },
@@ -83,7 +102,10 @@ export const cases: CaseRecord[] = [
     indigenousCommunities: ["Musqueam Indian Band"],
     indigenousGroup: "First Nations",
     parties: ["Musqueam Indian Band members", "The Crown"],
-    sources: [official("src-guerin-scc", "Guerin v The Queen", "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/2495/index.do")],
+    sources: [
+      official("src-guerin-scc", "Guerin v The Queen", "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/2495/index.do"),
+      encyclopedia("src-guerin-tce", "Guerin Case", "https://www.thecanadianencyclopedia.ca/en/article/guerin-case"),
+    ],
     relatedCases: [{ caseSlug: "calder-v-british-columbia-1973", type: "Relied on", note: "Built on Calder’s recognition of a pre-existing Indigenous interest in land." }, { caseSlug: "r-v-sparrow-1990", type: "Related", note: "Its fiduciary reasoning influenced section 35 analysis." }],
     timelineEvents: [{ date: "1984-11-01", court: "Supreme Court of Canada", citation: "[1984] 2 SCR 335", outcome: "Appeal allowed; Crown held liable for breach of fiduciary duty.", sourceUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/2495/index.do" }],
     approximateRegion: "Vancouver, British Columbia",
@@ -112,7 +134,10 @@ export const cases: CaseRecord[] = [
     indigenousCommunities: ["Musqueam Indian Band"],
     indigenousGroup: "First Nations",
     parties: ["Ronald Edward Sparrow", "The Crown"],
-    sources: [official("src-sparrow-scc", "R v Sparrow", "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/609/index.do")],
+    sources: [
+      official("src-sparrow-scc", "R v Sparrow", "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/609/index.do"),
+      encyclopedia("src-sparrow-tce", "Sparrow Case", "https://www.thecanadianencyclopedia.ca/en/article/sparrow-case"),
+    ],
     relatedCases: [{ caseSlug: "guerin-v-the-queen-1984", type: "Relied on", note: "Drew on the Crown’s fiduciary relationship with Indigenous peoples." }, { caseSlug: "r-v-marshall-1999", type: "Applied", note: "Later applied in the treaty-rights context." }],
     timelineEvents: [{ date: "1990-05-31", court: "Supreme Court of Canada", citation: "[1990] 1 SCR 1075", outcome: "Appeal allowed; further proceedings required.", sourceUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/609/index.do" }],
     approximateRegion: "Lower Fraser River, British Columbia",

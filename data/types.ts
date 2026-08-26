@@ -8,7 +8,21 @@ export interface Source {
   publisher: string;
   url: string;
   type: "Primary" | "Secondary";
+  category?: "Judgment" | "Official Summary" | "Case Information" | "Background Explainer" | "Treaty Source";
+  verificationStatus?: VerificationLevel;
+  supports?: string[];
+  note?: string;
   accessedDate: string;
+}
+
+export interface SourceProvider {
+  id: string;
+  name: string;
+  url: string;
+  authority: "Official court" | "Official government" | "Legal database" | "Secondary reference";
+  coverage: string;
+  discoveryMethod: "Automated monitor" | "API-assisted" | "Editorial search";
+  publicationRule: string;
 }
 
 export interface Quote {
