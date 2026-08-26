@@ -8,7 +8,7 @@ const nav = [
 export function SiteHeader() {
   return (
     <header className="site-header inner-header">
-      <Link className="brand" href="/" aria-label="OpenCourt home"><span className="brand-mark">OC</span><span>OpenCourt</span></Link>
+      <Link className="brand" href="/" aria-label="OpenCourt home"><span className="brand-mark">OC</span><span className="brand-copy"><span>OpenCourt</span><small>Canadian Indigenous Case Law</small></span></Link>
       <nav className="desktop-nav" aria-label="Primary navigation">{nav.map(([label, href]) => <Link href={href} key={href}>{label}</Link>)}</nav>
       <details className="mobile-nav">
         <summary>Menu</summary>
@@ -22,7 +22,7 @@ export function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="footer-top">
-        <div><Link className="brand" href="/"><span className="brand-mark">OC</span><span>OpenCourt</span></Link><p>Making Canadian court cases concerning Indigenous peoples and rights easier to understand and verify.</p></div>
+        <div><Link className="brand" href="/"><span className="brand-mark">OC</span><span className="brand-copy"><span>OpenCourt</span><small>Canadian Indigenous Case Law</small></span></Link><p>Making Canadian court cases concerning Indigenous peoples and rights easier to understand and verify.</p></div>
         <div><h3>Explore</h3><Link href="/cases">Case database</Link><Link href="/topics">Legal topics</Link><Link href="/communities">Communities</Link><Link href="/timeline">Legal timeline</Link></div>
         <div><h3>Project</h3><Link href="/about">About</Link><Link href="/sources">Sources &amp; methodology</Link><Link href="/admin">Admin architecture</Link></div>
       </div>
