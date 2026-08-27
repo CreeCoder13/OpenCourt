@@ -30,6 +30,12 @@ button,input { font:inherit; }
 .hero-search input::placeholder { color:#788581; }
 .hero-search button { align-self:stretch; padding:0 22px; border:1px solid #d0b66f; background:var(--ink); color:#f3dfaa; border-radius:1px; font-family:Georgia,serif; font-weight:700; cursor:pointer; }
 .hero-search button span { margin-left:20px; }
+.hero-timeline-link { display:flex; justify-content:center; margin-top:16px; }
+.hero-timeline-link a { display:grid; grid-template-columns:auto auto auto; gap:10px; align-items:center; min-height:45px; padding:8px 17px; border:1px solid rgba(215,186,107,.62); background:rgba(255,255,255,.055); color:#fff6df; box-shadow:inset 0 -3px 0 rgba(184,146,50,.38); transition:background .2s,border-color .2s,transform .2s; }
+.hero-timeline-link a:hover { transform:translateY(-1px); border-color:#e0c277; background:rgba(255,255,255,.1); }
+.hero-timeline-link span { color:#c9b9af; font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:.09em; }
+.hero-timeline-link strong { color:#f1d98f; font:600 13px Georgia,serif; }
+.hero-timeline-link b { color:#d2ad50; font:400 17px Georgia,serif; }
 .search-suggestions { display:flex; align-items:center; gap:17px; flex-wrap:wrap; margin-top:17px; color:#9eb3ae; font-size:12px; }
 .search-suggestions a { color:#d6e2df; border-bottom:1px solid rgba(214,226,223,.35); }
 .hero-rule { height:1px; margin-top:50px; background:rgba(255,255,255,.14); }
@@ -465,6 +471,7 @@ button,input { font:inherit; }
   .source-priority,.accuracy-grid,.terminology-grid,.principles-grid,.scope-card,.provider-grid{grid-template-columns:1fr}.scope-card{padding:30px}.ingestion-flow{grid-template-columns:1fr}.ingestion-flow>i{display:none}.admin-page{padding:32px 20px 70px}.admin-lock{padding:28px}.admin-architecture>div:first-child{align-items:start;flex-direction:column}.admin-module-grid{grid-template-columns:1fr 1fr}.ingestion-console{grid-template-columns:1fr;padding:22px}.workflow-row{align-items:stretch;flex-direction:column}.workflow-row>i{display:none}
 }
 @media(max-width:430px){.hero h1,.page-hero h1{font-size:38px}.hero-stats{grid-template-columns:1fr 1fr}.home-topic-grid,.profile-facts,.admin-module-grid{grid-template-columns:1fr}.treaty-grid{grid-template-columns:1fr}.home-treaty-grid{grid-template-columns:repeat(2,1fr)}.community-grid dl{grid-template-columns:1fr}.source-band>div{grid-template-columns:1fr}.source-band a{grid-column:1}}
+@media(max-width:430px){.hero-timeline-link a{width:100%;grid-template-columns:1fr auto}.hero-timeline-link span{grid-column:1/-1}.hero-timeline-link strong{font-size:14px}}
 
 /* Maroon and gold legal editorial theme */
 body { background-color:#fbf7ef; background-image:linear-gradient(rgba(116,70,40,.025) 1px,transparent 1px); background-size:100% 32px; }
