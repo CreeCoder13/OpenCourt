@@ -1,5 +1,6 @@
 import { cases } from "./cases";
-import type { Community, Topic, Treaty } from "./types";
+import type { Community, Topic } from "./types";
+export { treaties, treatyBySlug } from "./treaties";
 
 const verified = "2026-08-26";
 
@@ -71,39 +72,5 @@ export const communities: Community[] = communitySeed.map(([name, indigenousGrou
   };
 });
 
-export const treaties: Treaty[] = Array.from({ length: 11 }, (_, index) => {
-  const name = `Treaty ${index + 1}`;
-  const connectedCases = cases.filter((item) => item.treaties.includes(name));
-  const connectedCommunities = communities.filter((item) => item.treaties.includes(name));
-  return {
-    id: `treaty-${index + 1}`,
-    slug: `treaty-${index + 1}`,
-    name,
-    description: index === 7
-      ? "Treaty 8 is a historic numbered treaty. This index currently connects verified case records; fuller treaty history and interpretations will be added only with primary sources."
-      : "This historic numbered treaty is indexed for future verified research. Detailed history, adhesions, connected Nations, and legal interpretations are not yet verified for publication.",
-    provincesTerritories: index === 7 ? ["Alberta", "British Columbia", "Saskatchewan", "Northwest Territories"] : [],
-    communities: connectedCommunities.map((item) => item.slug),
-    caseSlugs: connectedCases.map((item) => item.slug),
-    sources: [],
-    verificationLevel: index === 7 ? "Secondary Source" : "Needs Verification",
-    lastVerified: verified,
-  };
-});
-
-treaties.push({
-  id: "treaty-peace-friendship",
-  slug: "peace-and-friendship-treaties",
-  name: "Peace and Friendship Treaties",
-  description: "A group of historic treaties in Atlantic Canada. Their interpretation is context-specific; this page connects verified decisions without treating disputed meanings as settled.",
-  provincesTerritories: ["Nova Scotia", "New Brunswick", "Prince Edward Island"],
-  communities: communities.filter((item) => item.treaties.includes("Peace and Friendship Treaties")).map((item) => item.slug),
-  caseSlugs: cases.filter((item) => item.treaties.includes("Peace and Friendship Treaties")).map((item) => item.slug),
-  sources: [],
-  verificationLevel: "Secondary Source",
-  lastVerified: verified,
-});
-
 export const topicBySlug = (slug: string) => topics.find((item) => item.slug === slug);
 export const communityBySlug = (slug: string) => communities.find((item) => item.slug === slug);
-export const treatyBySlug = (slug: string) => treaties.find((item) => item.slug === slug);
