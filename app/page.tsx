@@ -14,7 +14,7 @@ export default function Home() {
       <h1>Understand Indigenous<br />Court Cases in Canada</h1>
       <p className="hero-copy">Explore court decisions involving Indigenous rights, treaties, land, governance, consultation, title, and more — explained in plain language.</p>
       <form className="hero-search" action="/cases"><label className="sr-only" htmlFor="home-search">Search the case database</label><span aria-hidden="true">⌕</span><input id="home-search" name="q" placeholder="Search a court case, First Nation, treaty, right, or keyword" /><button type="submit">Search cases <span aria-hidden="true">→</span></button></form>
-      <div className="hero-timeline-link"><a href="/timeline"><span>Explore legal history</span><strong>Open the timeline</strong><b aria-hidden="true">→</b></a></div>
+      <div className="hero-timeline-link"><a href="/timeline"><span>Explore legal history</span><strong>Timeline</strong><b aria-hidden="true">→</b></a></div>
       <div className="search-suggestions" aria-label="Example searches"><span>Try:</span><Link href="/cases?q=Canoe+Lake">Canoe Lake</Link><Link href="/cases?q=Treaty+6+hunting">Treaty 6 hunting</Link><Link href="/cases?q=Aboriginal+title+British+Columbia">Aboriginal title in B.C.</Link><Link href="/cases?q=Supreme+Court+Metis">Supreme Court Métis</Link></div>
       <div className="hero-rule" /><dl className="hero-stats"><div><dt>11</dt><dd>Landmark case profiles</dd></div><div><dt>17</dt><dd>Legal topics</dd></div><div><dt>11</dt><dd>Numbered treaties</dd></div><div><dt>Primary</dt><dd>Sources prioritized</dd></div></dl>
     </section>
