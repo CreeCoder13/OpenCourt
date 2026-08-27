@@ -46,6 +46,7 @@ const communitySeed: Array<[string, Community["indigenousGroup"], string, string
   ["Tsilhqot’in Nation", "First Nations", "British Columbia", [], "https://www.tsilhqotin.ca/"],
   ["Xeni Gwet’in First Nations Government", "First Nations", "British Columbia", [], "https://www.xenigwetin.ca/"],
   ["Congress of Aboriginal Peoples", "Métis", "Canada", [], "https://abo-peoples.org/"],
+  ["Sault Ste. Marie Métis community", "Métis", "Ontario", [], undefined],
   ["Lakes Tribe of the Colville Confederated Tribes", "First Nations", "British Columbia / Washington", [], undefined],
   ["Sinixt", "First Nations", "British Columbia", [], undefined],
 ];

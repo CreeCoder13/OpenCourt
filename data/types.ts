@@ -60,6 +60,7 @@ export interface CaseRecord {
   filingDate?: string;
   status: "Decided" | "Ongoing" | "Appeal Pending" | "Settled";
   outcome: CaseOutcome;
+  landmark: boolean;
   significance: number;
   summaryShort: string;
   summaryFull: string;
