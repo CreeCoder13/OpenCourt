@@ -753,3 +753,62 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,su
   .development-intro{grid-template-columns:1fr;gap:10px}.development-grid{grid-template-columns:1fr}.timeline-watch{grid-template-columns:1fr;gap:24px;margin-top:65px;padding:26px 22px}.timeline-watch>a{white-space:normal;text-align:center}
 }
 @media(prefers-reduced-motion:reduce){.timeline-card{transition:none}}
+
+/* Long-view legislative timeline */
+.legal-history{scroll-margin-top:24px}
+.legal-history-intro{display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:end;padding:22px 0 30px;border-bottom:1px solid #cbb788}
+.legal-history-intro .kicker{margin:0 0 11px}
+.legal-history-intro h2{margin:0;color:#3a101e;font:500 clamp(34px,4vw,50px)/1.02 Georgia,serif;letter-spacing:-.035em}
+.legal-history-intro>p{margin:0;color:#67544d;font:14px/1.7 Georgia,serif}
+.period-jump{position:sticky;top:0;z-index:14;display:grid;grid-template-columns:repeat(10,1fr);gap:1px;margin:28px 0 58px;padding:1px;background:#bda875;border:1px solid #bda875;box-shadow:0 8px 24px rgba(58,16,30,.13)}
+.period-jump a{min-width:0;padding:13px 6px;background:#fffaf0;text-align:center;transition:background .18s,color .18s}
+.period-jump a:hover,.period-jump a:focus-visible{background:#4a1226;color:#fff4d7}
+.period-jump strong,.period-jump span{display:block}
+.period-jump strong{color:#5b172c;font:500 16px Georgia,serif}
+.period-jump a:hover strong,.period-jump a:focus-visible strong{color:#fff4d7}
+.period-jump span{margin-top:4px;color:#88746b;font-size:6px;font-weight:700;text-transform:uppercase;letter-spacing:.07em}
+.period-jump a:hover span,.period-jump a:focus-visible span{color:#d9bd6d}
+.legal-period-list{max-width:1050px;margin:auto}
+.legal-period{display:grid;grid-template-columns:112px minmax(0,1fr);gap:34px;position:relative;scroll-margin-top:105px}
+.legal-period-year{position:relative;text-align:right}
+.legal-period-year span{position:sticky;top:90px;display:inline-block;padding-top:4px;color:#8f6816;font:500 25px Georgia,serif}
+.legal-period-year i{position:absolute;top:11px;right:-50px;width:13px;height:13px;border:3px solid #681a32;border-radius:50%;background:#d1b45d;box-shadow:0 0 0 6px #f6ecda}
+.legal-period-year::after{content:"";position:absolute;top:27px;bottom:0;right:-44px;width:1px;background:#bea96f}
+.legal-period:last-child .legal-period-year::after{bottom:42px}
+.legal-period-content{padding:0 0 62px}
+.legal-period-content>header{display:flex;justify-content:space-between;gap:25px;align-items:flex-start;padding:0 0 18px;border-bottom:1px solid #d4c29d}
+.legal-period-content>header>div>span{color:#8e6a1b;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.1em}
+.legal-period-content>header h3{max-width:690px;margin:7px 0 0;color:#4c1527;font:500 20px/1.35 Georgia,serif}
+.legal-period-content>header>small{flex:0 0 auto;margin-top:6px;padding:6px 8px;border:1px solid #d1bc82;background:#f4ead1;color:#725719;font-size:7px;font-weight:700;text-transform:uppercase;letter-spacing:.07em}
+.legal-milestone-grid{display:grid;gap:10px;margin-top:14px}
+.legal-milestone{border:1px solid #d1bf9a;border-left:4px solid #4a1226;background:#fffdf8;box-shadow:3px 3px 0 rgba(184,146,50,.09)}
+.legal-milestone[open]{border-left-color:#b89232;background:#fff9ec}
+.legal-milestone summary{display:grid;grid-template-columns:65px minmax(0,1fr) 28px;gap:18px;align-items:start;padding:20px;cursor:pointer;list-style:none}
+.legal-milestone summary::-webkit-details-marker{display:none}
+.legal-milestone summary>span{color:#956c16;font:500 20px Georgia,serif}
+.legal-milestone summary small{display:block;color:#8a6c29;font-size:7px;font-weight:700;text-transform:uppercase;letter-spacing:.1em}
+.legal-milestone h4{margin:5px 0 7px;color:#421020;font:500 21px/1.15 Georgia,serif}
+.legal-milestone summary p{margin:0;color:#65534c;font-size:10px;line-height:1.65}
+.legal-milestone summary>b{display:grid;place-items:center;width:27px;height:27px;border:1px solid #bda367;color:#671a32;font:400 18px Georgia,serif;transition:transform .2s}
+.legal-milestone[open] summary>b{transform:rotate(45deg)}
+.legal-milestone-more{margin:0 20px 20px 103px;padding:19px 20px;border-top:1px solid #d6c49f;background:#f2e6d1}
+.legal-milestone-more h5{margin:0 0 7px;color:#6a1b32;font:500 14px Georgia,serif}
+.legal-milestone-more>p{margin:0;color:#5f4d46;font-size:10px;line-height:1.7}
+.legal-milestone-more footer{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-top:15px;padding-top:13px;border-top:1px solid #d4c09a}
+.legal-milestone-more a{color:#64182f;font-size:9px;font-weight:700}
+.legal-milestone-more footer span{color:#837168;font-size:7px;text-transform:uppercase;letter-spacing:.05em}
+.legal-period-empty{margin-top:14px;padding:19px 21px;border:1px dashed #cbb98d;background:#f4ecdc}
+.legal-period-empty span{color:#8c6819;font-size:7px;font-weight:700;text-transform:uppercase;letter-spacing:.1em}
+.legal-period-empty p{margin:7px 0 0;color:#716059;font-size:10px;line-height:1.6}
+.court-timeline-divider{display:grid;grid-template-columns:1fr 1fr;gap:65px;align-items:end;margin:35px 0 12px;padding:54px 0 28px;border-top:5px double #b89232;border-bottom:1px solid #cbb788}
+.court-timeline-divider .kicker{margin:0 0 9px}
+.court-timeline-divider h2{margin:0;color:#3a101e;font:500 43px/1 Georgia,serif}
+.court-timeline-divider>p{margin:0;color:#67544d;font:13px/1.7 Georgia,serif}
+
+@media(max-width:900px){
+  .period-jump{grid-template-columns:repeat(5,1fr);position:static}.legal-period{grid-template-columns:85px minmax(0,1fr)}.legal-period-year i{right:-42px}.legal-period-year::after{right:-36px}.legal-history-intro{grid-template-columns:1fr;gap:18px}.court-timeline-divider{grid-template-columns:1fr;gap:16px}
+}
+@media(max-width:700px){
+  .legal-history-intro{padding-top:9px}.legal-history-intro h2{font-size:35px}.period-jump{display:flex;gap:1px;overflow-x:auto;margin:22px -20px 42px;padding:1px 20px;scrollbar-width:thin}.period-jump a{flex:0 0 82px;padding:13px 7px}.period-jump span{font-size:6px}
+  .legal-period{grid-template-columns:18px minmax(0,1fr);gap:13px;scroll-margin-top:20px}.legal-period-year{grid-column:1;grid-row:1;text-align:left}.legal-period-year span{position:static;writing-mode:vertical-rl;transform:rotate(180deg);font-size:17px}.legal-period-year i{top:1px;right:-8px;width:11px;height:11px}.legal-period-year::after{top:15px;right:-2px}.legal-period-content{grid-column:2;padding-bottom:45px}.legal-period-content>header{display:block}.legal-period-content>header h3{font-size:17px}.legal-period-content>header>small{display:inline-block;margin-top:11px}.legal-milestone summary{grid-template-columns:48px minmax(0,1fr);gap:12px;padding:17px 15px}.legal-milestone summary>b{grid-column:1;grid-row:2;margin-top:-27px}.legal-milestone h4{font-size:18px}.legal-milestone summary p{font-size:9px}.legal-milestone-more{margin:0 15px 15px;padding:16px}.legal-milestone-more footer{align-items:flex-start;flex-direction:column}.court-timeline-divider{margin-top:20px;padding-top:42px}.court-timeline-divider h2{font-size:36px}
+}
