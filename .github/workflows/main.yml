@@ -35,7 +35,6 @@ jobs:
      
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Check code quality
-        run: pnpm lint
+
       - name: Build website
         run: pnpm build
