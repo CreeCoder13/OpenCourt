@@ -1,0 +1,41 @@
+name: OpenCourt checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: opencourt-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Validate website
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.13.0"
+          cache: pnpm
+     
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check code quality
+        run: pnpm lint
+      - name: Build website
+        run: pnpm build
