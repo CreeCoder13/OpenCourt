@@ -8,7 +8,7 @@ const nav = [
 export function SiteHeader() {
   return (
     <header className="site-header inner-header">
-      <Link className="brand" href="/" aria-label="OpenCourt home"><span className="brand-mark">OC</span><span className="brand-copy"><span>OpenCourt</span><small>Canadian Indigenous Case Law</small></span></Link>
+      <a className="brand" href="/" aria-label="OpenCourt home"><span className="brand-mark">OC</span><span className="brand-copy"><span>OpenCourt</span><small>Canadian Indigenous Case Law</small></span></a>
       <nav className="desktop-nav" aria-label="Primary navigation">{nav.map(([label, href]) => <Link href={href} key={href}>{label}</Link>)}</nav>
       <details className="mobile-nav">
         <summary>Menu</summary>
