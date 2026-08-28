@@ -137,10 +137,22 @@ export function TreatyMapExplorer({ records }: { records: Treaty[] }) {
     setViewBox({ x: (bounds.minX + bounds.maxX - nextWidth) / 2, y: (bounds.minY + bounds.maxY - nextHeight) / 2, width: nextWidth, height: nextHeight });
   };
 
-  const zoom = (factor: number) => setViewBox((current) => {
+  const zoom = useCallback((factor: number) => setViewBox((current) => {
     const width = Math.max(110, Math.min(1000, current.width * factor)); const height = width * 0.56;
     return { x: current.x + (current.width - width) / 2, y: current.y + (current.height - height) / 2, width, height };
-  });
+  }), []);
+
+  useEffect(() => {
+    const map = svgRef.current;
+    if (!map || !collection) return;
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      zoom(event.deltaY > 0 ? 1.18 : .84);
+    };
+    map.addEventListener("wheel", handleWheel, { passive: false });
+    return () => map.removeEventListener("wheel", handleWheel);
+  }, [collection, zoom]);
 
   const handleMapClick = (event: React.MouseEvent<SVGSVGElement>) => {
     if (!svgRef.current) return;
@@ -175,7 +187,7 @@ export function TreatyMapExplorer({ records }: { records: Treaty[] }) {
     <div className="treaty-map-layout">
       <div className="treaty-map-stage">
         <div className="treaty-map-toolbar"><span>{hoveredName || `${filteredFeatures.length} treaty areas · Scroll to zoom`}</span><div><button type="button" onClick={() => zoom(.75)} aria-label="Zoom in">+</button><button type="button" onClick={() => zoom(1.35)} aria-label="Zoom out">−</button><button type="button" onClick={() => setViewBox(INITIAL_VIEW)}>Canada</button></div></div>
-        {collection ? <svg ref={svgRef} viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`} onClick={handleMapClick} onWheel={(event) => { event.preventDefault(); zoom(event.deltaY > 0 ? 1.18 : .84); }} onPointerDown={(event) => { if (event.pointerType !== "mouse") return; drag.current = { x: event.clientX, y: event.clientY, view: viewBox }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!drag.current) return; const rect = event.currentTarget.getBoundingClientRect(); const dx = ((event.clientX - drag.current.x) / rect.width) * drag.current.view.width; const dy = ((event.clientY - drag.current.y) / rect.height) * drag.current.view.height; setViewBox({ ...drag.current.view, x: drag.current.view.x - dx, y: drag.current.view.y - dy }); }} onPointerUp={() => { drag.current = null; }} role="img" aria-label="Interactive map of historic treaty areas over an outline map of Canada">
+        {collection ? <svg ref={svgRef} viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`} onClick={handleMapClick} onPointerDown={(event) => { if (event.pointerType !== "mouse") return; drag.current = { x: event.clientX, y: event.clientY, view: viewBox }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!drag.current) return; const rect = event.currentTarget.getBoundingClientRect(); const dx = ((event.clientX - drag.current.x) / rect.width) * drag.current.view.width; const dy = ((event.clientY - drag.current.y) / rect.height) * drag.current.view.height; setViewBox({ ...drag.current.view, x: drag.current.view.x - dx, y: drag.current.view.y - dy }); }} onPointerUp={() => { drag.current = null; }} role="img" aria-label="Interactive map of historic treaty areas over an outline map of Canada">
           <defs><linearGradient id="water" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#d8e5e4" /><stop offset="1" stopColor="#edf1ea" /></linearGradient><filter id="land-shadow" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#31504b" floodOpacity=".18" /></filter></defs>
           <rect width="1000" height="560" fill="url(#water)" />
           {canada?.features.map((feature, index) => <path className="canada-background" key={`canada-${index}`} d={geometryPath(feature.geometry, projector)} fillRule="evenodd" filter="url(#land-shadow)" />)}
