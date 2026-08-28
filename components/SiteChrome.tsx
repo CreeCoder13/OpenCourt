@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 const nav = [
-  ["Cases", "/cases"], ["Laws", "/laws"], ["Communities", "/communities"], ["Treaties", "/treaties"],
-  ["Rights & Legal Topics", "/topics"], ["Timeline", "/timeline"], ["Cases to Watch", "/cases-to-watch"],
+  ["Timeline", "/timeline"], ["Cases", "/cases"], ["Laws", "/laws"], ["Indigenous Communities", "/communities"],
+  ["Treaties", "/treaties"], ["Legal Definitions", "/topics"], ["Ongoing Cases", "/cases-to-watch"],
 ];
 
 export function SiteHeader() {
@@ -23,7 +23,7 @@ export function SiteFooter() {
     <footer className="site-footer">
       <div className="footer-top">
         <div><Link className="brand" href="/"><span className="brand-mark">OC</span><span className="brand-copy"><span>OpenCourt</span><small>Canadian Indigenous Case Law</small></span></Link><p>Making Canadian court cases concerning Indigenous peoples and rights easier to understand and verify.</p></div>
-        <div><h3>Explore</h3><Link href="/cases">Case database</Link><Link href="/laws">Laws &amp; constitutional texts</Link><Link href="/topics">Legal topics</Link><Link href="/communities">Communities</Link><Link href="/timeline">Legal timeline</Link></div>
+        <div><h3>Explore</h3><Link href="/timeline">Legal timeline</Link><Link href="/cases">Case database</Link><Link href="/laws">Laws &amp; constitutional texts</Link><Link href="/topics">Legal definitions</Link><Link href="/communities">Indigenous communities</Link><Link href="/cases-to-watch">Ongoing cases</Link></div>
         <div><h3>Project</h3><Link href="/about">About</Link><Link href="/sources">Sources &amp; methodology</Link><Link href="/admin">Admin architecture</Link></div>
       </div>
       <div className="disclaimer"><strong>Legal information, not legal advice.</strong> Summaries are for public information and may be AI-assisted, reviewed and corrected. Consult the original judgment, legislation or agreement and a qualified legal professional for advice.</div>
