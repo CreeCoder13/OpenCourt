@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TreatyExplorer } from "../../components/TreatyExplorer";
+import { TreatyMapExplorer } from "../../components/TreatyMapExplorer";
 import { Breadcrumbs, PageShell } from "../../components/SiteChrome";
 import { treaties } from "../../data/treaties";
 
@@ -21,6 +22,8 @@ export default function TreatiesPage() {
       </div>
       <div className="treaty-stats"><div><strong>{treaties.length}</strong><span>reviewed catalogue records</span></div><div><strong>11</strong><span>Numbered Treaties</span></div><div><strong>{modernCount}</strong><span>selected modern agreements</span></div><div><strong>Growing</strong><span>designed for new records</span></div></div>
     </section>
+
+    <TreatyMapExplorer records={treaties} />
 
     <section className="treaty-category-section">
       <div className="catalog-intro"><div><p className="kicker">How the catalogue is organized</p><h2>Three ways into treaty history</h2></div><p>Browse a major group, jump directly to a Numbered Treaty, or search every reviewed record below.</p></div>

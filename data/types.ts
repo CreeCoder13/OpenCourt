@@ -124,6 +124,7 @@ export interface Treaty {
   communities: string[];
   indigenousParties: Array<{ name: string; communitySlug?: string; role?: "Original signatory" | "Adhesion" | "Treaty organization" | "Party" }>;
   crownParties: string[];
+  crownRepresentatives?: Array<{ name: string; role: string }>;
   status: string;
   legalIssues: string[];
   territory: {
@@ -131,10 +132,13 @@ export interface Treaty {
     boundaryNote: string;
     centroid?: { latitude: number; longitude: number };
     boundaryData?: string;
+    mapFeatureNames?: string[];
   };
   terms: Array<{ topic: string; summary: string }>;
   adhesions: Array<{ date?: string; place?: string; parties?: string[]; note: string }>;
   interpretationNote: string;
+  oralUnderstandings?: Array<{ topic: string; summary: string }>;
+  originalDocumentURL?: string;
   caseSlugs: string[];
   sources: Source[];
   verificationLevel: VerificationLevel;

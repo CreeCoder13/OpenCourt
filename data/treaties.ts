@@ -5,6 +5,20 @@ const verified = "2026-08-27";
 const historicTexts = "https://www.rcaanc-cirnac.gc.ca/eng/1370373165583/1581292088522";
 const treatyMap = "https://www.rcaanc-cirnac.gc.ca/eng/1100100032297/1544716489360";
 const modernTreaties = "https://www.rcaanc-cirnac.gc.ca/eng/1677073191939/1677073214344";
+const historicTreatyDataset = "https://open.canada.ca/data/en/dataset/f281b150-0645-48e4-9c30-01f55f93f78e";
+const numberedTreatyRepresentatives: Record<number, Treaty["crownRepresentatives"]> = {
+  1: [{ name: "Adams George Archibald", role: "Lieutenant Governor of Manitoba and the North-West Territories" }],
+  2: [{ name: "Adams George Archibald", role: "Lieutenant Governor of Manitoba and the North-West Territories" }],
+  3: [{ name: "Alexander Morris", role: "Lieutenant Governor of Manitoba and the North-West Territories" }],
+  4: [{ name: "Alexander Morris", role: "Lieutenant Governor of Manitoba and the North-West Territories" }, { name: "David Laird", role: "Minister of the Interior" }, { name: "William J. Christie", role: "Treaty commissioner" }],
+  5: [{ name: "Alexander Morris", role: "Lieutenant Governor of Manitoba and the North-West Territories" }, { name: "James McKay", role: "Treaty commissioner" }, { name: "Thomas Howard", role: "Treaty commissioner" }],
+  6: [{ name: "Alexander Morris", role: "Lieutenant Governor of Manitoba and the North-West Territories" }, { name: "James McKay", role: "Treaty commissioner" }, { name: "William J. Christie", role: "Treaty commissioner" }],
+  7: [{ name: "David Laird", role: "Lieutenant Governor of the North-West Territories" }, { name: "James F. Macleod", role: "North-West Mounted Police commissioner" }],
+  8: [{ name: "David Laird", role: "Treaty commissioner" }, { name: "James A. J. McKenna", role: "Treaty commissioner" }, { name: "James Hamilton Ross", role: "Treaty commissioner" }],
+  9: [{ name: "Duncan Campbell Scott", role: "Treaty commissioner" }, { name: "Samuel Stewart", role: "Treaty commissioner" }, { name: "Daniel G. MacMartin", role: "Treaty commissioner for Ontario" }],
+  10: [{ name: "James A. J. McKenna", role: "Treaty commissioner" }],
+  11: [{ name: "Henry Anthony Conroy", role: "Treaty commissioner" }],
+};
 
 const source = (id: string, title: string, url: string, supports: string[]): Source => ({
   id,
@@ -69,11 +83,14 @@ const numbered = ({
   communities: parties.map((party) => party.communitySlug).filter((slug): slug is string => Boolean(slug)),
   indigenousParties: parties,
   crownParties: [number <= 7 ? "Crown represented by the Dominion of Canada" : "Crown in right of Canada (then the Dominion of Canada)"],
+  crownRepresentatives: numberedTreatyRepresentatives[number],
   status: "In force; continuing rights and obligations",
   legalIssues: issues,
   territory: {
     description: territory,
     boundaryNote: "Historic treaty boundaries are commonly mapped as approximate. This catalogue does not present a survey boundary or determine the scope of any Nation’s rights.",
+    boundaryData: historicTreatyDataset,
+    mapFeatureNames: [`Treaty ${number}`],
   },
   terms: [
     { topic: "Land", summary: "The written treaty records a Crown land-surrender clause. Indigenous understandings of the land relationship and the legal effect of that language are not reduced here to a single interpretation." },
@@ -83,6 +100,8 @@ const numbered = ({
   ],
   adhesions,
   interpretationNote: "This page is an educational starting point, not a finding about the treaty’s meaning. Courts interpret treaties liberally, with attention to the Indigenous perspective, historical context and the honour of the Crown; parties may still disagree about particular terms and implementation.",
+  oralUnderstandings: [{ topic: "Negotiated relationship", summary: "Oral histories and accounts of the negotiations may describe promises and understandings not fully reflected in the written text. They must be considered Nation by Nation and source by source." }],
+  originalDocumentURL: historicTexts,
   sources: [
     source(`t${number}-text`, `Treaty texts — Treaty ${number}`, historicTexts, ["Treaty text", "signing information", "adhesions"]),
     source(`t${number}-map`, "Maps of treaty-making in Canada", treatyMap, ["general geographic context", "approximate mapped area"]),
