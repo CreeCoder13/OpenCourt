@@ -11,7 +11,7 @@ type TreatyFeature = { type: "Feature"; properties: { ENAME: string }; geometry:
 type TreatyCollection = { type: "FeatureCollection"; features: TreatyFeature[]; metadata?: { source: string; publisher: string; accessed: string; note: string } };
 type ViewBox = { x: number; y: number; width: number; height: number };
 
-const INITIAL_VIEW: ViewBox = { x: 0, y: 0, width: 1000, height: 560 };
+const INITIAL_VIEW: ViewBox = { x: 18, y: 24, width: 940, height: 526.4 };
 const featureSlug: Record<string, string> = {
   "Douglas Treaties": "douglas-treaties",
   "Peace and Friendship Treaties": "peace-and-friendship-treaties",
@@ -69,6 +69,7 @@ const displayDate = (value?: string) => {
 
 export function TreatyMapExplorer({ records }: { records: Treaty[] }) {
   const [collection, setCollection] = useState<TreatyCollection | null>(null);
+  const [canada, setCanada] = useState<TreatyCollection | null>(null);
   const [selectedName, setSelectedName] = useState("Treaty 6");
   const [hoveredName, setHoveredName] = useState("");
   const [query, setQuery] = useState("");
@@ -83,7 +84,12 @@ export function TreatyMapExplorer({ records }: { records: Treaty[] }) {
   const drag = useRef<{ x: number; y: number; view: ViewBox } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  useEffect(() => { fetch("/data/historic-treaties.geojson").then((response) => response.json() as Promise<TreatyCollection>).then(setCollection).catch(() => setCollection(null)); }, []);
+  useEffect(() => {
+    Promise.all([
+      fetch("/data/historic-treaties.geojson").then((response) => response.json() as Promise<TreatyCollection>),
+      fetch("/data/canada.geojson").then((response) => response.json() as Promise<TreatyCollection>),
+    ]).then(([treatiesData, canadaData]) => { setCollection(treatiesData); setCanada(canadaData); }).catch(() => { setCollection(null); setCanada(null); });
+  }, []);
 
   const recordFor = useCallback((name: string) => records.find((record) => record.slug === featureSlug[cleanName(name)]), [records]);
   const filteredFeatures = useMemo(() => (collection?.features || []).filter((feature) => {
@@ -148,10 +154,13 @@ export function TreatyMapExplorer({ records }: { records: Treaty[] }) {
     <div className="treaty-map-layout">
       <div className="treaty-map-stage">
         <div className="treaty-map-toolbar"><span>{hoveredName || `${filteredFeatures.length} sourced treaty areas visible`}</span><div><button type="button" onClick={() => zoom(.75)} aria-label="Zoom in">+</button><button type="button" onClick={() => zoom(1.35)} aria-label="Zoom out">−</button><button type="button" onClick={() => setViewBox(INITIAL_VIEW)}>Canada</button></div></div>
-        {collection ? <svg ref={svgRef} viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`} onClick={handleMapClick} onWheel={(event) => { event.preventDefault(); zoom(event.deltaY > 0 ? 1.18 : .84); }} onPointerDown={(event) => { drag.current = { x: event.clientX, y: event.clientY, view: viewBox }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!drag.current) return; const rect = event.currentTarget.getBoundingClientRect(); const dx = ((event.clientX - drag.current.x) / rect.width) * drag.current.view.width; const dy = ((event.clientY - drag.current.y) / rect.height) * drag.current.view.height; setViewBox({ ...drag.current.view, x: drag.current.view.x - dx, y: drag.current.view.y - dy }); }} onPointerUp={() => { drag.current = null; }} role="img" aria-label="Interactive map of historic treaty areas in Canada">
-          <rect width="1000" height="560" fill="#e8eee9" />
+        {collection ? <svg ref={svgRef} viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`} onClick={handleMapClick} onWheel={(event) => { event.preventDefault(); zoom(event.deltaY > 0 ? 1.18 : .84); }} onPointerDown={(event) => { drag.current = { x: event.clientX, y: event.clientY, view: viewBox }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!drag.current) return; const rect = event.currentTarget.getBoundingClientRect(); const dx = ((event.clientX - drag.current.x) / rect.width) * drag.current.view.width; const dy = ((event.clientY - drag.current.y) / rect.height) * drag.current.view.height; setViewBox({ ...drag.current.view, x: drag.current.view.x - dx, y: drag.current.view.y - dy }); }} onPointerUp={() => { drag.current = null; }} role="img" aria-label="Interactive map of historic treaty areas over an outline map of Canada">
+          <defs><linearGradient id="water" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#d8e5e4" /><stop offset="1" stopColor="#edf1ea" /></linearGradient><filter id="land-shadow" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#31504b" floodOpacity=".18" /></filter></defs>
+          <rect width="1000" height="560" fill="url(#water)" />
+          {canada?.features.map((feature, index) => <path className="canada-background" key={`canada-${index}`} d={geometryPath(feature.geometry)} fillRule="evenodd" filter="url(#land-shadow)" />)}
           <g className="map-graticule">{[100, 250, 400, 550, 700, 850].map((x) => <line key={`x${x}`} x1={x} x2={x} y1="0" y2="560" />)}{[100, 220, 340, 460].map((y) => <line key={`y${y}`} x1="0" x2="1000" y1={y} y2={y} />)}</g>
-          {filteredFeatures.map((feature) => { const name = cleanName(feature.properties.ENAME); const index = mappedNames.indexOf(name); return <path key={feature.properties.ENAME} d={geometryPath(feature.geometry)} fill={colours[index % colours.length]} className={name === selectedName ? "selected" : ""} fillRule="evenodd" onMouseEnter={() => setHoveredName(name)} onMouseLeave={() => setHoveredName("")}><title>{name}</title></path>; })}
+          <g className="map-labels" aria-hidden="true"><text x="491" y="118">CANADA</text><text x="76" y="367">PACIFIC</text><text x="881" y="410">ATLANTIC</text><text x="504" y="47">ARCTIC</text></g>
+          {filteredFeatures.map((feature) => { const name = cleanName(feature.properties.ENAME); const index = mappedNames.indexOf(name); return <path key={feature.properties.ENAME} d={geometryPath(feature.geometry)} fill={colours[index % colours.length]} className={`treaty-area${name === selectedName ? " selected" : ""}`} fillRule="evenodd" onMouseEnter={() => setHoveredName(name)} onMouseLeave={() => setHoveredName("")}><title>{name}</title></path>; })}
         </svg> : <div className="treaty-map-loading">Loading verified treaty boundaries…</div>}
         {overlaps.length > 1 && <div className="overlap-picker"><span>{overlaps.length} treaty areas at this point</span>{overlaps.map((name) => <button type="button" className={name === selectedName ? "active" : ""} onClick={() => setSelectedName(name)} key={name}>{name}</button>)}</div>}
         <p className="map-data-credit">Boundary source: Crown-Indigenous Relations and Northern Affairs Canada · Historic Treaties open data · generalized for display · accessed August 28, 2026</p>
