@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Breadcrumbs, PageShell, VerificationBadge } from "../../components/SiteChrome";
+import { Breadcrumbs, PageShell } from "../../components/SiteChrome";
 import { topics } from "../../data/catalog";
 
 export const metadata: Metadata = { title: "Rights & Legal Topics | OpenCourt", description: "Plain-language guides to Aboriginal title, treaty rights, consultation, section 35, Métis rights, Inuit rights, and related legal topics." };

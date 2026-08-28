@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { CaseRecord } from "../data/types";
 import { CaseListCard } from "./CaseCard";
 
@@ -22,15 +22,10 @@ function matchReason(item: CaseRecord, query: string) {
   return "summary or keyword";
 }
 
-export function CasesExplorer({ records }: { records: CaseRecord[] }) {
-  const [query, setQuery] = useState("");
+export function CasesExplorer({ records, initialQuery = "" }: { records: CaseRecord[]; initialQuery?: string }) {
+  const [query, setQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<Filters>(empty);
   const [sort, setSort] = useState("newest");
-
-  useEffect(() => {
-    const next = new URLSearchParams(window.location.search).get("q") || "";
-    setQuery(next);
-  }, []);
 
   const options = useMemo(() => ({
     group: unique(records.map((item) => item.indigenousGroup)),

@@ -17,13 +17,22 @@ export const metadata: Metadata = {
 };
 
 export default function TimelinePage() {
+  const timelineItems: { name: string; year: number; url?: string }[] = [
+    ...legalMilestones.map((item) => ({ name: item.title, year: item.year })),
+    ...cases.map((item) => ({
+      name: item.caseName,
+      year: Number(item.decisionDate.slice(0, 4)),
+      url: `https://opencourt-canada.t98ymftg9z.chatgpt.site/cases/${item.slug}`,
+    })),
+  ];
+
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: "Indigenous Court Cases Timeline",
     description: metadata.description,
     url: "https://opencourt-canada.t98ymftg9z.chatgpt.site/timeline",
-    mainEntity: { "@type": "ItemList", numberOfItems: cases.length + legalMilestones.length, itemListElement: [...legalMilestones.map((item) => ({ name: item.title, year: item.year })), ...cases.map((item) => ({ name: item.caseName, year: Number(item.decisionDate.slice(0, 4)), url: `https://opencourt-canada.t98ymftg9z.chatgpt.site/cases/${item.slug}` }))].sort((a, b) => a.year - b.year).map((item, index) => ({ "@type": "ListItem", position: index + 1, name: item.name, ...(item.url ? { url: item.url } : {}) })) },
+    mainEntity: { "@type": "ItemList", numberOfItems: timelineItems.length, itemListElement: timelineItems.sort((a, b) => a.year - b.year).map((item, index) => ({ "@type": "ListItem", position: index + 1, name: item.name, ...(item.url ? { url: item.url } : {}) })) },
   };
 
   return <PageShell>

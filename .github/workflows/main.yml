@@ -35,5 +35,28 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Run tests
+        run: pnpm test
+
+      - name: Run lint checks
+        run: pnpm lint
+
+      - name: Run type checks
+        run: pnpm typecheck
+
+      # GitHub does not provide repository secrets to workflows from forks or
+      # Dependabot pull requests. Keep those builds useful while requiring the
+      # configured secret for trusted pushes, manual runs, and same-repo PRs.
+      - name: Check server API configuration
+        if: >-
+          github.actor != 'dependabot[bot]' &&
+          (github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository)
+        env:
+          OPENC_API_KEY: ${{ secrets.OPENC_API_KEY }}
+        run: pnpm check:openc-api-key
+
       - name: Build website
+        env:
+          OPENC_API_KEY: ${{ secrets.OPENC_API_KEY }}
         run: pnpm build
