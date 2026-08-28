@@ -1,6 +1,6 @@
 import type { CaseRecord, Source } from "./types";
 
-const lastVerified = "2026-08-26";
+const lastVerified = "2026-08-28";
 const official = (id: string, title: string, url: string): Source => ({
   id,
   title,
@@ -41,6 +41,59 @@ const shared = {
   filingDate: undefined,
   coordinates: undefined,
 };
+
+type AdditionalCaseSeed = {
+  slug: string;
+  caseName: string;
+  citation: string;
+  decisionDate: string;
+  provinceTerritory: string;
+  outcome: CaseRecord["outcome"];
+  significance: number;
+  summary: string;
+  decision: string;
+  importance: string;
+  legalTopics: string[];
+  treaties?: string[];
+  communities: string[];
+  indigenousGroup?: CaseRecord["indigenousGroup"];
+  parties: string[];
+  officialUrl: string;
+  relatedCases?: CaseRecord["relatedCases"];
+  region?: string;
+};
+
+const additionalCase = (seed: AdditionalCaseSeed): CaseRecord => ({
+  ...shared,
+  id: `case-${seed.slug}`,
+  slug: seed.slug,
+  caseName: seed.caseName,
+  officialCitation: seed.citation,
+  neutralCitation: /^\d{4} SCC \d+$/.test(seed.citation) ? seed.citation : undefined,
+  provinceTerritory: seed.provinceTerritory,
+  decisionDate: seed.decisionDate,
+  outcome: seed.outcome,
+  significance: seed.significance,
+  landmark: seed.significance >= 9,
+  summaryShort: seed.summary,
+  summaryFull: seed.summary,
+  facts: seed.summary,
+  indigenousArgument: "The Indigenous parties asked the Court to recognize or enforce the rights, obligations, jurisdiction, or remedies described in the official judgment.",
+  otherPartyArgument: "The opposing parties advanced the position recorded in the official judgment. Consult the reasons for the complete submissions and procedural history.",
+  decision: seed.decision,
+  importance: seed.importance,
+  beforeCase: "The governing doctrine or its application remained contested before this decision.",
+  afterCase: seed.importance,
+  legalTopics: seed.legalTopics,
+  treaties: seed.treaties ?? [],
+  indigenousCommunities: seed.communities,
+  indigenousGroup: seed.indigenousGroup ?? "First Nations",
+  parties: seed.parties,
+  sources: [official(`src-${seed.slug}-scc`, seed.caseName, seed.officialUrl)],
+  relatedCases: seed.relatedCases ?? [],
+  timelineEvents: [{ date: seed.decisionDate, court: "Supreme Court of Canada", citation: seed.citation, outcome: seed.decision, sourceUrl: seed.officialUrl }],
+  approximateRegion: seed.region ?? seed.provinceTerritory,
+});
 
 export const cases: CaseRecord[] = [
   {
@@ -420,6 +473,123 @@ export const cases: CaseRecord[] = [
     approximateRegion: "Kootenay region, British Columbia",
   },
 ];
+
+cases.push(
+  ...[
+    additionalCase({
+      slug: "r-v-sioui-1990", caseName: "R v Sioui", citation: "[1990] 1 SCR 1025", decisionDate: "1990-05-24", provinceTerritory: "Quebec", outcome: "Nation Successful", significance: 9,
+      summary: "The Court held that the 1760 Murray document was a treaty protecting Huron-Wendat customs and religious practices in the territory at issue.",
+      decision: "The Crown appeal was dismissed and the treaty protection defeated the provincial prosecutions.",
+      importance: "Sioui established influential principles for identifying and interpreting historic treaties from the Indigenous and Crown perspectives.",
+      legalTopics: ["Treaty Rights", "Treaty Interpretation", "Hunting & Fishing Rights", "Section 35"], treaties: ["Huron-British Treaty of 1760"], communities: ["Huron-Wendat Nation"], parties: ["Attorney General of Quebec", "Régent Sioui and others"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/608/index.do", region: "Jacques-Cartier area, Quebec",
+    }),
+    additionalCase({
+      slug: "r-v-badger-1996", caseName: "R v Badger", citation: "[1996] 1 SCR 771", decisionDate: "1996-04-03", provinceTerritory: "Alberta", outcome: "Mixed Decision", significance: 9,
+      summary: "The Court interpreted Treaty 8 hunting rights and set enduring rules requiring treaties to be read generously, with ambiguities resolved in favour of Indigenous signatories.",
+      decision: "The appeals were resolved individually under the Treaty 8 and Natural Resources Transfer Agreement framework.",
+      importance: "Badger remains a leading authority on treaty interpretation, honourable Crown conduct, and the regulation of treaty harvesting rights.",
+      legalTopics: ["Treaty Rights", "Treaty Interpretation", "Hunting & Fishing Rights", "Section 35"], treaties: ["Treaty 8"], communities: ["Treaty 8 First Nations"], parties: ["Wayne Clarence Badger and other appellants", "The Crown"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/1366/index.do", region: "Treaty 8 territory, Alberta",
+    }),
+    additionalCase({
+      slug: "r-v-pamajewon-1996", caseName: "R v Pamajewon", citation: "[1996] 2 SCR 821", decisionDate: "1996-08-22", provinceTerritory: "Ontario", outcome: "Government Successful", significance: 8,
+      summary: "The Court assumed without deciding that self-government claims could fall under section 35, but rejected the claimed right to regulate high-stakes gambling on the evidence.",
+      decision: "The appeals from gambling convictions were dismissed.",
+      importance: "Pamajewon became a central, and often criticized, authority on how section 35 self-government claims are characterized and proven.",
+      legalTopics: ["Indigenous Governance", "Section 35", "Criminal Law"], communities: ["Shawanaga First Nation", "Eagle Lake First Nation"], parties: ["Howard Pamajewon and others", "The Crown"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/1411/index.do", region: "Ontario",
+    }),
+    additionalCase({
+      slug: "weywaykum-indian-band-v-canada-2002", caseName: "Wewaykum Indian Band v Canada", citation: "2002 SCC 79", decisionDate: "2002-12-06", provinceTerritory: "British Columbia", outcome: "Government Successful", significance: 8,
+      summary: "The Court explained when fiduciary duties arise during reserve creation and emphasized that Crown fiduciary obligations attach to specific Indigenous interests rather than existing at large.",
+      decision: "The competing bands’ appeals were dismissed.",
+      importance: "Wewaykum is a leading framework for reserve creation, the scope of fiduciary duties, and equitable defences in Crown-Indigenous litigation.",
+      legalTopics: ["Fiduciary Duty", "Reserve Lands", "Specific Claims"], communities: ["Wewaykum First Nation", "Wei Wai Kum First Nation"], parties: ["Wewaykum Indian Band", "Wewaikai Indian Band", "Canada"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/2022/index.do", region: "Campbell River area, British Columbia",
+    }),
+    additionalCase({
+      slug: "taku-river-tlingit-first-nation-v-british-columbia-2004", caseName: "Taku River Tlingit First Nation v British Columbia", citation: "2004 SCC 74", decisionDate: "2004-11-18", provinceTerritory: "British Columbia", outcome: "Government Successful", significance: 9,
+      summary: "Released with Haida Nation, the decision confirmed that the duty to consult applies to asserted rights and held that the environmental assessment process provided adequate consultation in the circumstances.",
+      decision: "The provincial appeal was allowed and the project approval was restored.",
+      importance: "Taku River showed how consultation can be integrated into environmental assessment and how adequacy is evaluated contextually.",
+      legalTopics: ["Duty to Consult", "Aboriginal Title", "Environment", "Resource Development", "Section 35"], communities: ["Taku River Tlingit First Nation"], parties: ["Taku River Tlingit First Nation", "British Columbia", "project proponents"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/2190/index.do", relatedCases: [{ caseSlug: "haida-nation-v-british-columbia-2004", type: "Related", note: "Released together as foundational duty-to-consult decisions." }], region: "Taku River watershed, British Columbia",
+    }),
+    additionalCase({
+      slug: "rio-tinto-alcan-v-carrier-sekani-2010", caseName: "Rio Tinto Alcan Inc v Carrier Sekani Tribal Council", citation: "2010 SCC 43", decisionDate: "2010-10-28", provinceTerritory: "British Columbia", outcome: "Government Successful", significance: 8,
+      summary: "The Court clarified the trigger for consultation, requiring contemplated Crown conduct, a potential adverse effect, and knowledge of an asserted or established right.",
+      decision: "The appeal was allowed because the regulatory decision did not create a new adverse effect that triggered consultation on the record.",
+      importance: "Carrier Sekani supplies the standard three-part test for determining when the duty to consult is triggered.",
+      legalTopics: ["Duty to Consult", "Natural Resources", "Resource Development", "Section 35"], communities: ["Carrier Sekani Tribal Council"], parties: ["Rio Tinto Alcan Inc", "Carrier Sekani Tribal Council", "British Columbia Utilities Commission"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/7885/index.do", relatedCases: [{ caseSlug: "haida-nation-v-british-columbia-2004", type: "Applied", note: "Clarified Haida Nation’s consultation trigger." }], region: "Nechako watershed, British Columbia",
+    }),
+    additionalCase({
+      slug: "manitoba-metis-federation-v-canada-2013", caseName: "Manitoba Métis Federation Inc v Canada", citation: "2013 SCC 14", decisionDate: "2013-03-08", provinceTerritory: "Manitoba", outcome: "Nation Successful", significance: 10,
+      summary: "The Court declared that Canada failed to implement the land-grant promise in section 31 of the Manitoba Act, 1870 diligently and in accordance with the honour of the Crown.",
+      decision: "A declaration was granted concerning Canada’s unconstitutional implementation of the constitutional promise to Métis children.",
+      importance: "The decision made the honour of the Crown enforceable in implementing a constitutional obligation to the Métis and recognized that declaratory relief was not barred by limitations or laches.",
+      legalTopics: ["Métis Rights", "Honour of the Crown", "Land & Resources", "Constitutional Law"], communities: ["Manitoba Métis Federation", "Red River Métis"], indigenousGroup: "Métis", parties: ["Manitoba Métis Federation Inc and individual plaintiffs", "Canada", "Manitoba"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/12888/index.do", region: "Manitoba",
+    }),
+    additionalCase({
+      slug: "clyde-river-v-petroleum-geo-services-2017", caseName: "Clyde River (Hamlet) v Petroleum Geo-Services Inc", citation: "2017 SCC 40", decisionDate: "2017-07-26", provinceTerritory: "Nunavut", outcome: "Nation Successful", significance: 9,
+      summary: "The Court quashed approval for offshore seismic testing because consultation with affected Inuit communities was inadequate given the serious potential effects on treaty harvesting rights.",
+      decision: "The appeal was allowed and the National Energy Board authorization was quashed.",
+      importance: "Clyde River established that regulatory processes can discharge consultation duties only when they provide meaningful consultation and accommodation proportionate to the rights and impacts at stake.",
+      legalTopics: ["Inuit Rights", "Duty to Consult", "Treaty Rights", "Environment", "Resource Development"], treaties: ["Nunavut Land Claims Agreement"], communities: ["Inuit of Clyde River"], indigenousGroup: "Inuit", parties: ["Hamlet of Clyde River and Inuit organizations", "Petroleum Geo-Services Inc and others"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/16743/index.do", region: "Baffin Bay and Davis Strait, Nunavut",
+    }),
+    additionalCase({
+      slug: "chippewas-of-the-thames-v-enbridge-2017", caseName: "Chippewas of the Thames First Nation v Enbridge Pipelines Inc", citation: "2017 SCC 41", decisionDate: "2017-07-26", provinceTerritory: "Ontario", outcome: "Government Successful", significance: 8,
+      summary: "The Court held that the Crown could rely on a regulatory process to satisfy consultation duties and found consultation adequate for the Line 9 pipeline modification.",
+      decision: "The First Nation’s appeal was dismissed.",
+      importance: "Together with Clyde River, the decision defines when an administrative tribunal’s process can fulfill the Crown’s duty to consult.",
+      legalTopics: ["Duty to Consult", "Treaty Rights", "Resource Development", "Environment"], communities: ["Chippewas of the Thames First Nation"], parties: ["Chippewas of the Thames First Nation", "Enbridge Pipelines Inc", "National Energy Board", "Canada"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/16744/index.do", region: "Southwestern Ontario",
+    }),
+    additionalCase({
+      slug: "first-nation-of-nacho-nyak-dun-v-yukon-2017", caseName: "First Nation of Nacho Nyak Dun v Yukon", citation: "2017 SCC 58", decisionDate: "2017-12-01", provinceTerritory: "Yukon", outcome: "Nation Successful", significance: 9,
+      summary: "The Court enforced the collaborative land-use planning process in Yukon modern treaties and held that Yukon could not substantially depart from the recommended plan at the final stage.",
+      decision: "The appeal was allowed in part and Yukon’s approval of its plan was quashed.",
+      importance: "Nacho Nyak Dun is a leading modern-treaty implementation decision emphasizing honourable conduct and fidelity to negotiated constitutional arrangements.",
+      legalTopics: ["Treaty Rights", "Treaty Interpretation", "Self-Government", "Land & Resources", "Environment"], treaties: ["Yukon First Nations Final Agreements"], communities: ["First Nation of Nacho Nyak Dun", "Tr’ondëk Hwëch’in", "Vuntut Gwitchin First Nation"], parties: ["First Nation of Nacho Nyak Dun and others", "Government of Yukon"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/16890/index.do", region: "Peel Watershed, Yukon",
+    }),
+    additionalCase({
+      slug: "southwind-v-canada-2021", caseName: "Southwind v Canada", citation: "2021 SCC 28", decisionDate: "2021-07-16", provinceTerritory: "Ontario", outcome: "Nation Successful", significance: 9,
+      summary: "The Court set aside an equitable-compensation award for reserve land flooded for hydroelectric development and required compensation to reflect the land’s most advantageous use and the Crown’s fiduciary breach.",
+      decision: "The appeal was allowed and the matter was returned for reassessment of equitable compensation.",
+      importance: "Southwind is a leading remedial decision for Crown breaches involving reserve land and explains how equitable compensation differs from ordinary expropriation damages.",
+      legalTopics: ["Fiduciary Duty", "Reserve Lands", "Natural Resources", "Specific Claims"], treaties: ["Treaty 3"], communities: ["Lac Seul First Nation"], parties: ["Roger Southwind on behalf of Lac Seul First Nation", "Canada"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/18955/index.do", region: "Lac Seul, Ontario",
+    }),
+    additionalCase({
+      slug: "reference-first-nations-inuit-metis-children-2024", caseName: "Reference re An Act respecting First Nations, Inuit and Métis children, youth and families", citation: "2024 SCC 5", decisionDate: "2024-02-09", provinceTerritory: "Canada", outcome: "Nation Successful", significance: 10,
+      summary: "The Court unanimously upheld the federal Indigenous child and family services statute, including its affirmation of Indigenous jurisdiction and the priority rules for Indigenous laws.",
+      decision: "The Court held that the Act as a whole is constitutionally valid under Parliament’s section 91(24) authority.",
+      importance: "The reference is a foundational decision on Indigenous child welfare, legislative reconciliation, and Parliament’s affirmation of Indigenous self-government jurisdiction.",
+      legalTopics: ["Child & Family Services", "Indigenous Governance", "Section 35", "Constitutional Law", "Inuit Rights", "Métis Rights"], communities: ["First Nations", "Inuit", "Métis"], parties: ["Attorney General of Quebec", "Attorney General of Canada", "Indigenous governments and organizations"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/20264/index.do", region: "Canada-wide",
+    }),
+    additionalCase({
+      slug: "dickson-v-vuntut-gwitchin-first-nation-2024", caseName: "Dickson v Vuntut Gwitchin First Nation", citation: "2024 SCC 10", decisionDate: "2024-03-28", provinceTerritory: "Yukon", outcome: "Mixed Decision", significance: 9,
+      summary: "The Court considered the Charter’s application to a self-governing First Nation and held that section 25 shielded the Nation’s residency requirement for elected leaders from the individual equality claim.",
+      decision: "The challenge to the residency requirement was dismissed, with multiple sets of reasons on Charter application and section 25.",
+      importance: "Dickson is the Supreme Court’s leading modern authority on the relationship between Charter rights, section 25, collective Indigenous rights, and self-government.",
+      legalTopics: ["Indigenous Governance", "Self-Government", "Human Rights", "Constitutional Law", "Elections & Governance"], communities: ["Vuntut Gwitchin First Nation"], parties: ["Cindy Dickson", "Vuntut Gwitchin First Nation"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/20353/index.do", region: "Old Crow and northern Yukon",
+    }),
+    additionalCase({
+      slug: "shot-both-sides-v-canada-2024", caseName: "Shot Both Sides v Canada", citation: "2024 SCC 12", decisionDate: "2024-04-12", provinceTerritory: "Alberta", outcome: "Government Successful", significance: 8,
+      summary: "The Court held that a pre-1982 treaty land entitlement claim was barred by the applicable limitation period before section 35 came into force, while recognizing the Crown’s longstanding breach.",
+      decision: "The Blood Tribe’s appeal was dismissed on the limitations issue.",
+      importance: "Shot Both Sides clarifies the relationship between historic treaty breaches, limitation statutes, section 35, and declaratory relief.",
+      legalTopics: ["Treaty Rights", "Treaty Interpretation", "Land & Resources", "Constitutional Law"], treaties: ["Treaty 7"], communities: ["Blood Tribe / Kainai Nation"], parties: ["Jim Shot Both Sides and Blood Tribe representatives", "Canada"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/20392/index.do", region: "Blood Reserve, Alberta",
+    }),
+    additionalCase({
+      slug: "ontario-v-restoule-2024", caseName: "Ontario (Attorney General) v Restoule", citation: "2024 SCC 27", decisionDate: "2024-07-26", provinceTerritory: "Ontario", outcome: "Nation Successful", significance: 10,
+      summary: "The Court held that the Robinson Treaties require the Crown to increase annuities when economic circumstances permit and that the Crown had dishonourably breached its duty by failing to act for well over a century.",
+      decision: "Ontario’s appeal was dismissed in substance and the Court directed the Crown to exercise its treaty promise diligently and honourably.",
+      importance: "Restoule is a major treaty-implementation judgment on augmentation promises, the honour of the Crown, remedies, and the enduring nature of treaty relationships.",
+      legalTopics: ["Treaty Rights", "Treaty Interpretation", "Honour of the Crown", "Natural Resources"], treaties: ["Robinson-Huron Treaty", "Robinson-Superior Treaty"], communities: ["Robinson-Huron Treaty Anishinaabek", "Robinson-Superior Treaty Anishinaabek"], parties: ["Ontario", "Robinson Treaty beneficiaries", "Canada"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/20554/index.do", region: "Northern Ontario",
+    }),
+    additionalCase({
+      slug: "quebec-v-pekuakamiulnuatsh-takuhikan-2024", caseName: "Quebec (Attorney General) v Pekuakamiulnuatsh Takuhikan", citation: "2024 SCC 39", decisionDate: "2024-11-27", provinceTerritory: "Quebec", outcome: "Nation Successful", significance: 9,
+      summary: "The Court held that Quebec breached the honour of the Crown in negotiating funding for an Indigenous police service under agreements intended to support community self-administration.",
+      decision: "The Court upheld declaratory relief requiring honourable negotiation, while addressing the limits of contractual damages.",
+      importance: "The decision extends the practical force of the honour of the Crown to the negotiation and performance of agreements concerning essential Indigenous government services.",
+      legalTopics: ["Honour of the Crown", "Indigenous Governance", "Self-Government", "Treaty Rights"], communities: ["Pekuakamiulnuatsh First Nation"], parties: ["Attorney General of Quebec", "Pekuakamiulnuatsh Takuhikan"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/20755/index.do", region: "Mashteuiatsh, Quebec",
+    }),
+  ],
+);
 
 export const caseBySlug = (slug: string) => cases.find((item) => item.slug === slug);
 export const allTopics = [...new Set(cases.flatMap((item) => item.legalTopics))].sort();
