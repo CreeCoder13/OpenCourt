@@ -11,12 +11,12 @@ type TreatyFeature = { type: "Feature"; properties: { ENAME: string }; geometry:
 type TreatyCollection = { type: "FeatureCollection"; features: TreatyFeature[]; metadata?: { source: string; publisher: string; accessed: string; note: string } };
 type ViewBox = { x: number; y: number; width: number; height: number };
 
-const INITIAL_VIEW: ViewBox = { x: 18, y: 24, width: 940, height: 526.4 };
+const INITIAL_VIEW: ViewBox = { x: 30, y: 22, width: 920, height: 515.2 };
 const featureSlug: Record<string, string> = {
   "Douglas Treaties": "douglas-treaties",
   "Peace and Friendship Treaties": "peace-and-friendship-treaties",
-  "Robinson-Huron Treaty": "robinson-treaties",
-  "Robinson-Superior Treaty": "robinson-treaties",
+  "Robinson-Huron Treaty": "robinson-huron",
+  "Robinson-Superior Treaty": "robinson-superior",
   "Southern Ontario Treaties": "upper-canada-treaties",
   "Williams Treaties": "williams-treaties",
   ...Object.fromEntries(Array.from({ length: 11 }, (_, index) => [`Treaty ${index + 1}`, `treaty-${index + 1}`])),
@@ -38,11 +38,30 @@ const places = [
 ];
 
 const cleanName = (name: string) => name.replace(/\s+\([^)]*\)$/, "");
-const project = ([longitude, latitude]: Position): Position => [((longitude + 142) / 92) * 1000, ((84 - latitude) / 44) * 560];
-const ringPath = (ring: Position[]) => ring.map((point, index) => `${index ? "L" : "M"}${project(point).map((value) => value.toFixed(1)).join(" ")}`).join(" ") + "Z";
-const geometryPath = (geometry: Geometry) => geometry.type === "Polygon"
-  ? geometry.coordinates.map(ringPath).join(" ")
-  : geometry.coordinates.flatMap((polygon) => polygon.map(ringPath)).join(" ");
+type Projector = (position: Position) => Position;
+const linearProject: Projector = ([longitude, latitude]) => [((longitude + 142) / 92) * 1000, ((84 - latitude) / 44) * 560];
+const lambertRaw: Projector = ([longitude, latitude]) => {
+  const radians = Math.PI / 180; const phi = latitude * radians; const lambda = longitude * radians;
+  const phi1 = 49 * radians; const phi2 = 77 * radians; const lambda0 = -91.8666666667 * radians;
+  const n = Math.log(Math.cos(phi1) / Math.cos(phi2)) / Math.log(Math.tan(Math.PI / 4 + phi2 / 2) / Math.tan(Math.PI / 4 + phi1 / 2));
+  const factor = (Math.cos(phi1) * Math.pow(Math.tan(Math.PI / 4 + phi1 / 2), n)) / n;
+  const rho = factor / Math.pow(Math.tan(Math.PI / 4 + phi / 2), n);
+  return [rho * Math.sin(n * (lambda - lambda0)), -rho * Math.cos(n * (lambda - lambda0))];
+};
+const geometryPoints = (geometry: Geometry) => geometry.type === "Polygon" ? geometry.coordinates.flat() : geometry.coordinates.flat(2);
+const createCanadaProjection = (background: TreatyCollection | null): Projector => {
+  const points = background?.features.flatMap((feature) => geometryPoints(feature.geometry)) || [];
+  if (!points.length) return linearProject;
+  const raw = points.map(lambertRaw); const xs = raw.map(([x]) => x); const ys = raw.map(([, y]) => y);
+  const minX = Math.min(...xs); const maxX = Math.max(...xs); const minY = Math.min(...ys); const maxY = Math.max(...ys);
+  const scale = Math.min(920 / (maxX - minX), 510 / (maxY - minY));
+  const offsetX = (1000 - (maxX - minX) * scale) / 2; const offsetY = (560 - (maxY - minY) * scale) / 2;
+  return (position) => { const [x, y] = lambertRaw(position); return [offsetX + (x - minX) * scale, offsetY + (y - minY) * scale]; };
+};
+const ringPath = (ring: Position[], projector: Projector) => ring.map((point, index) => `${index ? "L" : "M"}${projector(point).map((value) => value.toFixed(1)).join(" ")}`).join(" ") + "Z";
+const geometryPath = (geometry: Geometry, projector: Projector) => geometry.type === "Polygon"
+  ? geometry.coordinates.map((ring) => ringPath(ring, projector)).join(" ")
+  : geometry.coordinates.flatMap((polygon) => polygon.map((ring) => ringPath(ring, projector))).join(" ");
 
 const pointInRing = (point: Position, ring: Position[]) => {
   let inside = false;
@@ -54,10 +73,12 @@ const pointInRing = (point: Position, ring: Position[]) => {
 };
 const pointInPolygon = (point: Position, polygon: Position[][]) => pointInRing(point, polygon[0]) && !polygon.slice(1).some((hole) => pointInRing(point, hole));
 const pointInGeometry = (point: Position, geometry: Geometry) => geometry.type === "Polygon" ? pointInPolygon(point, geometry.coordinates) : geometry.coordinates.some((polygon) => pointInPolygon(point, polygon));
+const pointInProjectedGeometry = (point: Position, geometry: Geometry, projector: Projector) => geometry.type === "Polygon"
+  ? pointInPolygon(point, geometry.coordinates.map((ring) => ring.map(projector)))
+  : geometry.coordinates.some((polygon) => pointInPolygon(point, polygon.map((ring) => ring.map(projector))));
 
-const geometryBounds = (geometry: Geometry) => {
-  const points = geometry.type === "Polygon" ? geometry.coordinates.flat() : geometry.coordinates.flat(2);
-  const projected = points.map(project);
+const geometryBounds = (geometry: Geometry, projector: Projector) => {
+  const projected = geometryPoints(geometry).map(projector);
   const xs = projected.map(([x]) => x); const ys = projected.map(([, y]) => y);
   return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) };
 };
@@ -92,6 +113,7 @@ export function TreatyMapExplorer({ records }: { records: Treaty[] }) {
   }, []);
 
   const recordFor = useCallback((name: string) => records.find((record) => record.slug === featureSlug[cleanName(name)]), [records]);
+  const projector = useMemo(() => createCanadaProjection(canada), [canada]);
   const filteredFeatures = useMemo(() => (collection?.features || []).filter((feature) => {
     const name = cleanName(feature.properties.ENAME); const record = recordFor(name); const q = query.trim().toLowerCase();
     return !hidden.has(name) && (!q || [name, record?.description, record?.placeSigned, ...(record?.indigenousParties.map((party) => party.name) || [])].join(" ").toLowerCase().includes(q))
@@ -108,7 +130,7 @@ export function TreatyMapExplorer({ records }: { records: Treaty[] }) {
     const feature = collection?.features.find((item) => cleanName(item.properties.ENAME) === name);
     setSelectedName(name); setOverlaps([]);
     if (!feature) return;
-    const bounds = geometryBounds(feature.geometry); const padding = 45;
+    const bounds = geometryBounds(feature.geometry, projector); const padding = 45;
     const width = Math.max(130, bounds.maxX - bounds.minX + padding * 2); const height = Math.max(100, bounds.maxY - bounds.minY + padding * 2);
     const scale = Math.max(width / 1000, height / 560);
     const nextWidth = Math.min(1000, 1000 * scale); const nextHeight = Math.min(560, 560 * scale);
@@ -124,8 +146,7 @@ export function TreatyMapExplorer({ records }: { records: Treaty[] }) {
     if (!svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
     const point: Position = [viewBox.x + ((event.clientX - rect.left) / rect.width) * viewBox.width, viewBox.y + ((event.clientY - rect.top) / rect.height) * viewBox.height];
-    const geographic: Position = [(point[0] / 1000) * 92 - 142, 84 - (point[1] / 560) * 44];
-    const matches = filteredFeatures.filter((feature) => pointInGeometry(geographic, feature.geometry)).map((feature) => cleanName(feature.properties.ENAME));
+    const matches = filteredFeatures.filter((feature) => pointInProjectedGeometry(point, feature.geometry, projector)).map((feature) => cleanName(feature.properties.ENAME));
     if (!matches.length) return;
     const next = matches.length > 1 && matches.includes(selectedName) ? matches[(matches.indexOf(selectedName) + 1) % matches.length] : matches.at(-1)!;
     setSelectedName(next); setOverlaps(matches);
@@ -157,10 +178,10 @@ export function TreatyMapExplorer({ records }: { records: Treaty[] }) {
         {collection ? <svg ref={svgRef} viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`} onClick={handleMapClick} onWheel={(event) => { event.preventDefault(); zoom(event.deltaY > 0 ? 1.18 : .84); }} onPointerDown={(event) => { drag.current = { x: event.clientX, y: event.clientY, view: viewBox }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!drag.current) return; const rect = event.currentTarget.getBoundingClientRect(); const dx = ((event.clientX - drag.current.x) / rect.width) * drag.current.view.width; const dy = ((event.clientY - drag.current.y) / rect.height) * drag.current.view.height; setViewBox({ ...drag.current.view, x: drag.current.view.x - dx, y: drag.current.view.y - dy }); }} onPointerUp={() => { drag.current = null; }} role="img" aria-label="Interactive map of historic treaty areas over an outline map of Canada">
           <defs><linearGradient id="water" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#d8e5e4" /><stop offset="1" stopColor="#edf1ea" /></linearGradient><filter id="land-shadow" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#31504b" floodOpacity=".18" /></filter></defs>
           <rect width="1000" height="560" fill="url(#water)" />
-          {canada?.features.map((feature, index) => <path className="canada-background" key={`canada-${index}`} d={geometryPath(feature.geometry)} fillRule="evenodd" filter="url(#land-shadow)" />)}
+          {canada?.features.map((feature, index) => <path className="canada-background" key={`canada-${index}`} d={geometryPath(feature.geometry, projector)} fillRule="evenodd" filter="url(#land-shadow)" />)}
           <g className="map-graticule">{[100, 250, 400, 550, 700, 850].map((x) => <line key={`x${x}`} x1={x} x2={x} y1="0" y2="560" />)}{[100, 220, 340, 460].map((y) => <line key={`y${y}`} x1="0" x2="1000" y1={y} y2={y} />)}</g>
-          <g className="map-labels" aria-hidden="true"><text x="491" y="118">CANADA</text><text x="76" y="367">PACIFIC</text><text x="881" y="410">ATLANTIC</text><text x="504" y="47">ARCTIC</text></g>
-          {filteredFeatures.map((feature) => { const name = cleanName(feature.properties.ENAME); const index = mappedNames.indexOf(name); return <path key={feature.properties.ENAME} d={geometryPath(feature.geometry)} fill={colours[index % colours.length]} className={`treaty-area${name === selectedName ? " selected" : ""}`} fillRule="evenodd" onMouseEnter={() => setHoveredName(name)} onMouseLeave={() => setHoveredName("")}><title>{name}</title></path>; })}
+          <g className="map-labels" aria-hidden="true"><text x={projector([-102, 69])[0]} y={projector([-102, 69])[1]}>CANADA</text><text x={projector([-136, 50])[0]} y={projector([-136, 50])[1]}>PACIFIC</text><text x={projector([-53, 49])[0]} y={projector([-53, 49])[1]}>ATLANTIC</text><text x={projector([-95, 81])[0]} y={projector([-95, 81])[1]}>ARCTIC</text></g>
+          {filteredFeatures.map((feature) => { const name = cleanName(feature.properties.ENAME); const index = mappedNames.indexOf(name); return <path key={feature.properties.ENAME} d={geometryPath(feature.geometry, projector)} fill={colours[index % colours.length]} className={`treaty-area${name === selectedName ? " selected" : ""}`} fillRule="evenodd" onMouseEnter={() => setHoveredName(name)} onMouseLeave={() => setHoveredName("")}><title>{name}</title></path>; })}
         </svg> : <div className="treaty-map-loading">Loading verified treaty boundaries…</div>}
         {overlaps.length > 1 && <div className="overlap-picker"><span>{overlaps.length} treaty areas at this point</span>{overlaps.map((name) => <button type="button" className={name === selectedName ? "active" : ""} onClick={() => setSelectedName(name)} key={name}>{name}</button>)}</div>}
         <p className="map-data-credit">Boundary source: Crown-Indigenous Relations and Northern Affairs Canada · Historic Treaties open data · generalized for display · accessed August 28, 2026</p>
