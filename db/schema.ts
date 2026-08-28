@@ -1,0 +1,127 @@
+export const schemaStatements = [
+  `CREATE TABLE IF NOT EXISTS discovery_items (
+    id TEXT PRIMARY KEY,
+    url TEXT NOT NULL,
+    normalized_url TEXT NOT NULL UNIQUE,
+    source_domain TEXT NOT NULL,
+    source_tier INTEGER NOT NULL CHECK (source_tier BETWEEN 1 AND 3),
+    discovered_by TEXT NOT NULL,
+    search_query TEXT,
+    title TEXT,
+    mime_type TEXT,
+    content_hash TEXT,
+    relevance TEXT NOT NULL DEFAULT 'POSSIBLY_RELEVANT',
+    relevance_score INTEGER NOT NULL DEFAULT 0,
+    relevance_reasons_json TEXT NOT NULL DEFAULT '[]',
+    proposed_type TEXT,
+    ai_confidence REAL,
+    extracted_json TEXT,
+    verification TEXT NOT NULL DEFAULT 'UNVERIFIED',
+    verification_sources_json TEXT NOT NULL DEFAULT '[]',
+    impact_score INTEGER,
+    impact_reasons_json TEXT NOT NULL DEFAULT '[]',
+    duplicate_of TEXT,
+    duplicate_reasons_json TEXT NOT NULL DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'DISCOVERED',
+    attempts INTEGER NOT NULL DEFAULT 0,
+    next_attempt_at TEXT,
+    last_error TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_discovery_items_queue
+    ON discovery_items (status, next_attempt_at, source_tier, created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_discovery_items_review
+    ON discovery_items (status, impact_score DESC, ai_confidence DESC)
+    WHERE status = 'REVIEW'`,
+  `CREATE INDEX IF NOT EXISTS idx_discovery_items_hash
+    ON discovery_items (content_hash)
+    WHERE content_hash IS NOT NULL`,
+  `CREATE TABLE IF NOT EXISTS source_documents (
+    content_hash TEXT PRIMARY KEY,
+    normalized_url TEXT NOT NULL,
+    r2_key TEXT,
+    mime_type TEXT,
+    etag TEXT,
+    last_modified TEXT,
+    extracted_text TEXT,
+    extraction_method TEXT,
+    fetched_at TEXT NOT NULL,
+    last_checked_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_source_documents_url ON source_documents (normalized_url)`,
+  `CREATE TABLE IF NOT EXISTS legal_records (
+    id TEXT PRIMARY KEY,
+    slug TEXT NOT NULL UNIQUE,
+    record_type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    citation TEXT,
+    decision_date TEXT,
+    court TEXT,
+    verification TEXT NOT NULL,
+    impact_score INTEGER NOT NULL DEFAULT 0,
+    payload_json TEXT NOT NULL,
+    published_at TEXT,
+    last_verified_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_legal_records_citation ON legal_records (citation) WHERE citation IS NOT NULL`,
+  `CREATE INDEX IF NOT EXISTS idx_legal_records_type_impact ON legal_records (record_type, impact_score DESC)`,
+  `CREATE TABLE IF NOT EXISTS legal_relationships (
+    id TEXT PRIMARY KEY,
+    from_record_id TEXT NOT NULL,
+    to_record_id TEXT,
+    target_label TEXT,
+    relationship_type TEXT NOT NULL,
+    evidence_url TEXT,
+    confidence REAL NOT NULL DEFAULT 0,
+    verified INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_legal_relationships_from ON legal_relationships (from_record_id, relationship_type)`,
+  `CREATE INDEX IF NOT EXISTS idx_legal_relationships_to ON legal_relationships (to_record_id, relationship_type) WHERE to_record_id IS NOT NULL`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_legal_relationships_unique
+    ON legal_relationships (from_record_id, relationship_type, COALESCE(to_record_id,''), COALESCE(target_label,''))`,
+  `CREATE TABLE IF NOT EXISTS ai_cache (
+    content_hash TEXT NOT NULL,
+    task TEXT NOT NULL,
+    model TEXT NOT NULL,
+    response_json TEXT NOT NULL,
+    input_tokens INTEGER NOT NULL DEFAULT 0,
+    output_tokens INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (content_hash, task, model)
+  )`,
+  `CREATE TABLE IF NOT EXISTS api_usage (
+    usage_date TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    calls INTEGER NOT NULL DEFAULT 0,
+    input_tokens INTEGER NOT NULL DEFAULT 0,
+    output_tokens INTEGER NOT NULL DEFAULT 0,
+    estimated_cost_usd REAL NOT NULL DEFAULT 0,
+    PRIMARY KEY (usage_date, provider)
+  )`,
+  `CREATE TABLE IF NOT EXISTS domain_crawl_state (
+    domain TEXT PRIMARY KEY,
+    robots_status TEXT NOT NULL DEFAULT 'UNKNOWN',
+    robots_checked_at TEXT,
+    robots_body TEXT,
+    next_allowed_at TEXT,
+    etag TEXT,
+    last_modified TEXT,
+    updated_at TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS scan_runs (
+    id TEXT PRIMARY KEY,
+    trigger_type TEXT NOT NULL,
+    started_at TEXT NOT NULL,
+    completed_at TEXT,
+    queries_run INTEGER NOT NULL DEFAULT 0,
+    urls_discovered INTEGER NOT NULL DEFAULT 0,
+    documents_processed INTEGER NOT NULL DEFAULT 0,
+    ai_calls INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL,
+    error TEXT
+  )`,
+] as const;

@@ -397,6 +397,39 @@ button,input { font:inherit; }
 .admin-lock input { width:100%; height:43px; margin-top:6px; padding:0 11px; border:1px solid var(--line); background:#f3f3ef; }
 .admin-lock button { width:100%; height:45px; margin-top:18px; border:0; background:#9aaaa5; color:white; }
 .admin-lock small { display:block; margin-top:17px; color:#87948f; font-size:9px; line-height:1.5; }
+.admin-intro { max-width:760px; margin:58px 0 46px; }
+.admin-intro>span { color:#8a6111; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.09em; }
+.admin-intro h1 { margin:12px 0 10px; font:500 45px Georgia,serif; color:#4b1326; }
+.admin-intro p { max-width:650px; color:#6e5d56; line-height:1.65; }
+.review-console { margin-bottom:70px; padding:30px; border:1px solid #bfa76d; border-top:5px solid #4b1326; background:#fffdf8; box-shadow:6px 6px 0 #ddcda9; }
+.review-console-head { display:grid; grid-template-columns:1fr minmax(310px,.7fr); gap:40px; align-items:end; }
+.review-console h2 { margin:7px 0 7px; font:500 32px Georgia,serif; color:#4b1326; }
+.review-console-head p:last-child { margin:0; color:#73635c; font-size:11px; }
+.review-auth label,.review-auth small { display:block; color:#7a6a62; font-size:9px; }
+.review-auth label { margin-bottom:6px; font-weight:700; text-transform:uppercase; }
+.review-auth>div { display:flex; }
+.review-auth input { min-width:0; flex:1; height:43px; padding:0 11px; border:1px solid #cdbc97; background:white; }
+.review-auth button,.review-actions button { border:0; background:#58162b; color:#f6e4b4; font-size:10px; font-weight:700; cursor:pointer; }
+.review-auth button { padding:0 18px; }
+.review-auth button:disabled,.review-actions button:disabled { cursor:not-allowed; opacity:.43; }
+.review-auth small { margin-top:6px; line-height:1.45; }
+.review-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:28px; }
+.review-card { display:flex; flex-direction:column; padding:22px; border:1px solid #d6c6a3; background:#f9f1e3; }
+.review-card-meta { display:flex; justify-content:space-between; gap:10px; color:#7b5e1d; font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+.verification-pill { padding:4px 7px; border-radius:999px; }
+.verification-pill.verified { background:#dbe8d9; color:#275b3e; }.verification-pill.unverified { background:#eed8d3; color:#7b2632; }
+.review-card h3 { margin:16px 0 8px; font:500 21px Georgia,serif; color:#4b1326; }
+.review-card>p { color:#6d5d56; font-size:11px; line-height:1.55; }
+.review-card dl { display:grid; grid-template-columns:repeat(4,1fr); margin:15px 0; padding:12px 0; border-block:1px solid #d6c6a3; }
+.review-card dl div { padding:0 8px; border-right:1px solid #d6c6a3; }.review-card dl div:last-child { border:0; }
+.review-card dt { color:#82736b; font-size:7px; text-transform:uppercase; }.review-card dd { margin:4px 0 0; color:#4b1326; font:700 11px Georgia,serif; }
+.review-card ul { margin:0 0 15px; padding-left:18px; color:#64564f; font-size:9px; line-height:1.6; }
+.review-card .review-warning { padding:9px; background:#f1ddd5; color:#74243a; font-size:9px; }
+.review-card>a { margin-top:auto; color:#6d1c34; font-size:10px; font-weight:700; text-underline-offset:3px; }
+.review-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+.review-actions button { min-height:39px; padding:0 15px; }.review-actions .reject { border:1px solid #8d6e60; background:transparent; color:#6d1c34; }
+.review-empty { display:flex; flex-direction:column; align-items:center; margin-top:25px; padding:28px; border:1px dashed #c8b68f; color:#6e5d56; }.review-empty span { margin-top:5px; font-size:10px; }
+.usage-strip{display:flex;flex-wrap:wrap;gap:18px;margin-top:22px;padding:11px 14px;background:#4b1326;color:#f5e3b5;font-size:9px}.usage-strip span{margin-right:auto;text-transform:uppercase;letter-spacing:.06em}.usage-strip b{font-weight:600}
 .admin-architecture { padding-top:50px; border-top:1px solid #ccd5d1; }
 .admin-architecture>div:first-child { display:flex; justify-content:space-between; gap:30px; align-items:end; }
 .admin-architecture h2 { margin:0; font:500 30px Georgia,serif; }
@@ -471,6 +504,8 @@ button,input { font:inherit; }
   .source-priority,.accuracy-grid,.terminology-grid,.principles-grid,.scope-card,.provider-grid{grid-template-columns:1fr}.scope-card{padding:30px}.ingestion-flow{grid-template-columns:1fr}.ingestion-flow>i{display:none}.admin-page{padding:32px 20px 70px}.admin-lock{padding:28px}.admin-architecture>div:first-child{align-items:start;flex-direction:column}.admin-module-grid{grid-template-columns:1fr 1fr}.ingestion-console{grid-template-columns:1fr;padding:22px}.workflow-row{align-items:stretch;flex-direction:column}.workflow-row>i{display:none}
 }
 @media(max-width:430px){.hero h1,.page-hero h1{font-size:38px}.hero-stats{grid-template-columns:1fr 1fr}.home-topic-grid,.profile-facts,.admin-module-grid{grid-template-columns:1fr}.treaty-grid{grid-template-columns:1fr}.home-treaty-grid{grid-template-columns:repeat(2,1fr)}.community-grid dl{grid-template-columns:1fr}.source-band>div{grid-template-columns:1fr}.source-band a{grid-column:1}}
+@media(max-width:800px){.review-console-head,.review-list{grid-template-columns:1fr}.review-card dl{grid-template-columns:repeat(2,1fr);gap:12px}.review-card dl div{border-right:0}.admin-intro h1{font-size:36px}}
+.laws-section{padding:70px max(28px,calc((100vw - 1184px)/2)) 100px;background:#fbf7ef}.laws-heading{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:end}.laws-heading h2{margin:8px 0 0;font:500 34px Georgia,serif;color:#4b1326}.laws-heading>p{margin:0;color:#73635c;font-size:12px;line-height:1.7}.law-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin:38px 0}.law-grid article{display:flex;flex-direction:column;padding:28px;border:1px solid #cdbc97;background:#fffdf8;box-shadow:4px 4px 0 #e1d2af}.law-card-top{display:flex;justify-content:space-between;color:#916a18;font-size:9px;font-weight:700;letter-spacing:.07em}.law-card-top em{font-style:normal}.law-grid h3{margin:18px 0 7px;font:500 24px Georgia,serif;color:#4b1326}.law-grid article>b{color:#6c1d35;font:700 11px Georgia,serif}.law-grid article>p{color:#665950;font-size:11px;line-height:1.65}.law-grid dl{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:13px 0;padding:16px 0;border-block:1px solid #ded0b0}.law-grid dt{color:#8a7b72;font-size:8px;text-transform:uppercase}.law-grid dd{margin:4px 0 0;color:#4e3b35;font-size:9px;line-height:1.45}.law-topics{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:20px}.law-topics span{padding:5px 8px;background:#efe2ca;color:#6e1c34;font-size:8px}.law-grid article>a{margin-top:auto;color:#681a32;font-size:10px;font-weight:700;text-underline-offset:3px}@media(max-width:760px){.laws-heading,.law-grid{grid-template-columns:1fr}.laws-section{padding-inline:20px}}
 @media(max-width:430px){.hero-timeline-link a{width:100%;grid-template-columns:1fr auto}.hero-timeline-link span{grid-column:1/-1}.hero-timeline-link strong{font-size:14px}}
 
 /* Maroon and gold legal editorial theme */

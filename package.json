@@ -11,8 +11,9 @@
     "start": "vinext start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/check-openc-api-key.test.mjs",
-    "check:openc-api-key": "node scripts/check-openc-api-key.mjs"
+    "test": "node --test tests/discovery.test.ts && node --test tests/check-openc-api-key.test.mjs",
+    "check:openc-api-key": "node scripts/check-openc-api-key.mjs",
+    "discovery:run": "node scripts/run-discovery.mjs"
   },
   "dependencies": {
     "next": "16.2.6",

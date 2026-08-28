@@ -19,7 +19,8 @@ export interface SourceProvider {
   id: string;
   name: string;
   url: string;
-  authority: "Official court" | "Official government" | "Legal database" | "Secondary reference";
+  authority: "Official court" | "Official government" | "Official legislature" | "Official Indigenous government" | "Legal database" | "Institutional source" | "Secondary reference";
+  tier?: 1 | 2 | 3;
   coverage: string;
   discoveryMethod: "Automated monitor" | "API-assisted" | "Editorial search";
   publicationRule: string;
