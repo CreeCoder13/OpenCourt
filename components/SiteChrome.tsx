@@ -2,7 +2,7 @@ import Link from "next/link";
 
 const nav = [
   ["Timeline", "/timeline"], ["Cases", "/cases"], ["Laws", "/laws"], ["Indigenous Communities", "/communities"],
-  ["Treaties", "/treaties"], ["Legal Definitions", "/topics"],
+  ["Legal Definitions", "/topics"], ["Treaties", "/treaties"],
 ];
 
 export function SiteHeader() {
