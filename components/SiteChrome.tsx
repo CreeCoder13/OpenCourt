@@ -9,10 +9,10 @@ export function SiteHeader() {
   return (
     <header className="site-header inner-header">
       <a className="brand" href="/" aria-label="OpenCourt home" title="Return to the OpenCourt home page"><span className="brand-mark">OC</span><span className="brand-copy"><span>OpenCourt</span><small>Canadian Indigenous Case Law</small></span></a>
-      <nav className="desktop-nav" aria-label="Primary navigation">{nav.map(([label, href]) => <Link href={href} key={href}>{label}</Link>)}</nav>
+      <nav className="desktop-nav" aria-label="Primary navigation">{nav.map(([label, href]) => <a href={href} key={href}>{label}</a>)}</nav>
       <details className="mobile-nav">
         <summary>Menu</summary>
-        <nav aria-label="Mobile navigation">{nav.map(([label, href]) => <Link href={href} key={href}>{label}</Link>)}<Link href="/about">About</Link><Link href="/sources">Sources</Link></nav>
+        <nav aria-label="Mobile navigation">{nav.map(([label, href]) => <a href={href} key={href}>{label}</a>)}<a href="/about">About</a><a href="/sources">Sources</a></nav>
       </details>
     </header>
   );
