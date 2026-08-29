@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 const nav = [
-  ["Timeline", "/timeline"], ["Cases", "/cases"], ["Laws", "/laws"], ["Indigenous Communities", "/communities"],
-  ["Legal Definitions", "/topics"], ["Treaties", "/treaties"],
+  ["Timeline", "/timeline"], ["Laws", "/laws"], ["Indigenous Communities", "/communities"],
+  ["Legal Definitions", "/topics"], ["Treaties", "/treaties"], ["Cases", "/cases"],
 ];
 
 export function SiteHeader() {
