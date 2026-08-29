@@ -592,6 +592,11 @@ cases.push(
 );
 
 export const caseBySlug = (slug: string) => cases.find((item) => item.slug === slug);
+// Publish ongoing matters only after their current stage and latest court event
+// have been verified against an authoritative source.
+export const ongoingCases: CaseRecord[] = [];
+export const allCases = [...cases, ...ongoingCases];
+export const caseByAnySlug = (slug: string) => allCases.find((item) => item.slug === slug);
 export const allTopics = [...new Set(cases.flatMap((item) => item.legalTopics))].sort();
 export const allCommunities = [...new Set(cases.flatMap((item) => item.indigenousCommunities))].sort();
 export const allTreaties = [...new Set(cases.flatMap((item) => item.treaties))].sort();

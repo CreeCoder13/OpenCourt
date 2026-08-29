@@ -1,6 +1,21 @@
 export type VerificationLevel = "Verified" | "Secondary Source" | "Needs Verification";
 export type ContentStatus = "Draft" | "Published" | "Needs Verification";
 export type CaseOutcome = "Nation Successful" | "Government Successful" | "Mixed Decision" | "Ongoing" | "Appeal Pending" | "Settled";
+export type OngoingCaseStatus =
+  | "Filed"
+  | "Awaiting response"
+  | "Awaiting hearing"
+  | "Hearing scheduled"
+  | "Hearing underway"
+  | "Decision reserved"
+  | "Decision released"
+  | "Under appeal"
+  | "Appeal hearing scheduled"
+  | "Supreme Court leave application"
+  | "Supreme Court leave granted"
+  | "Supreme Court hearing scheduled"
+  | "Settled"
+  | "Discontinued";
 
 export interface Source {
   id: string;
@@ -12,6 +27,7 @@ export interface Source {
   verificationStatus?: VerificationLevel;
   supports?: string[];
   note?: string;
+  publicationDate?: string;
   accessedDate: string;
 }
 
@@ -39,7 +55,18 @@ export interface TimelineEvent {
   court: string;
   citation: string;
   outcome: string;
+  event?: string;
+  explanation?: string;
   sourceUrl?: string;
+}
+
+export interface CaseDocument {
+  id: string;
+  title: string;
+  documentType: "Judgment" | "Court filing" | "Factum" | "Order" | "Reasons" | "Government document" | "Indigenous party statement" | "Other";
+  url: string;
+  sourceName: string;
+  date?: string;
 }
 
 export interface CaseRelationship {
@@ -52,6 +79,8 @@ export interface CaseRecord {
   id: string;
   slug: string;
   caseName: string;
+  caseType?: "past" | "ongoing";
+  courtFileNumber?: string;
   officialCitation: string;
   neutralCitation?: string;
   court: string;
@@ -59,12 +88,14 @@ export interface CaseRecord {
   provinceTerritory: string;
   decisionDate: string;
   filingDate?: string;
-  status: "Decided" | "Ongoing" | "Appeal Pending" | "Settled";
+  status: "Decided" | "Ongoing" | "Appeal Pending" | "Settled" | OngoingCaseStatus;
   outcome: CaseOutcome;
   landmark: boolean;
   significance: number;
   summaryShort: string;
   summaryFull: string;
+  legalIssues?: string[];
+  lawsInvolved?: string[];
   facts: string;
   indigenousArgument: string;
   otherPartyArgument: string;
@@ -82,6 +113,12 @@ export interface CaseRecord {
   sources: Source[];
   relatedCases: CaseRelationship[];
   timelineEvents: TimelineEvent[];
+  documents?: CaseDocument[];
+  currentStatus?: OngoingCaseStatus;
+  latestDevelopment?: string;
+  latestDevelopmentDate?: string;
+  nextHearingDate?: string;
+  expectedDecisionDate?: string;
   approximateRegion?: string;
   coordinates?: { latitude: number; longitude: number };
   verificationLevel: VerificationLevel;
