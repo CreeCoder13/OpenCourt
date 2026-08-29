@@ -99,6 +99,7 @@ export async function reviewItem(id: string, action: "publish" | "reject", revie
   const row = await db.prepare("SELECT * FROM discovery_items WHERE id=? AND status='REVIEW'").bind(id).first<Record<string, unknown>>();
   if (!row) throw new Error("Review item was not found or is no longer pending");
   const verification = String(row.verification) as VerificationLevel;
+  if (action === "publish" && row.duplicate_of) throw new Error("A probable duplicate cannot be published as a new record; merge or reject it during review");
   if (action === "publish" && !["VERIFIED_PRIMARY", "VERIFIED_MULTIPLE"].includes(verification)) {
     throw new Error("Unverified and partially verified records cannot be published");
   }
@@ -107,10 +108,19 @@ export async function reviewItem(id: string, action: "publish" | "reject", revie
     await db.prepare("UPDATE discovery_items SET status='REJECTED', last_error=?, updated_at=? WHERE id=?").bind(reviewerNote ?? "Rejected by editor", now, id).run();
     return;
   }
-  const extracted = parse<Json>(row.extracted_json, {});
+  const extracted: Json = {
+    ...parse<Json>(row.extracted_json, {}),
+    verificationSources: parse<EvidenceSource[]>(row.verification_sources_json, []),
+    lastVerified: now,
+  };
   const title = String(extracted.caseName ?? extracted.title ?? row.title ?? "Untitled legal record");
   const slug = String(extracted.slug ?? title.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
-  const recordId = String(extracted.id ?? crypto.randomUUID());
+  const existingRecord = await db.prepare("SELECT id,verification FROM legal_records WHERE slug=?").bind(slug).first<{ id: string; verification: VerificationLevel }>();
+  const verificationRank: Record<VerificationLevel, number> = { UNVERIFIED: 0, PARTIALLY_VERIFIED: 1, VERIFIED_PRIMARY: 2, VERIFIED_MULTIPLE: 3 };
+  if (existingRecord && verificationRank[verification] <= verificationRank[existingRecord.verification]) {
+    throw new Error("The existing reviewed record has equal or stronger verification and cannot be replaced automatically");
+  }
+  const recordId = existingRecord?.id ?? String(extracted.id ?? crypto.randomUUID());
   const relationships = [
     ...((Array.isArray(extracted.casesCited) ? extracted.casesCited : []) as unknown[]).map((label) => ({ type: "CITES_CASE", label })),
     ...((Array.isArray(extracted.legislationReferenced) ? extracted.legislationReferenced : []) as unknown[]).map((label) => ({ type: "REFERENCES_LEGISLATION", label })),
@@ -118,7 +128,9 @@ export async function reviewItem(id: string, action: "publish" | "reject", revie
   ].filter((relationship) => typeof relationship.label === "string" && relationship.label.trim());
   await db.batch([
     db.prepare(`INSERT INTO legal_records (id,slug,record_type,title,citation,decision_date,court,verification,impact_score,payload_json,published_at,last_verified_at,created_at,updated_at)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(slug) DO UPDATE SET payload_json=excluded.payload_json, verification=excluded.verification, impact_score=excluded.impact_score, updated_at=excluded.updated_at`)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(slug) DO UPDATE SET payload_json=excluded.payload_json, verification=excluded.verification, impact_score=excluded.impact_score, updated_at=excluded.updated_at
+      WHERE (CASE excluded.verification WHEN 'VERIFIED_MULTIPLE' THEN 3 WHEN 'VERIFIED_PRIMARY' THEN 2 WHEN 'PARTIALLY_VERIFIED' THEN 1 ELSE 0 END) >
+            (CASE legal_records.verification WHEN 'VERIFIED_MULTIPLE' THEN 3 WHEN 'VERIFIED_PRIMARY' THEN 2 WHEN 'PARTIALLY_VERIFIED' THEN 1 ELSE 0 END)`)
       .bind(recordId, slug, row.proposed_type ?? "CASE", title, extracted.neutralCitation ?? extracted.citation ?? null, extracted.decisionDate ?? null, extracted.court ?? null, verification, row.impact_score ?? 0, json(extracted), now, now, now, now),
     db.prepare("UPDATE discovery_items SET status='PUBLISHED', updated_at=? WHERE id=?").bind(now, id),
     ...relationships.map((relationship) => db.prepare("INSERT INTO legal_relationships (id,from_record_id,target_label,relationship_type,evidence_url,confidence,verified,created_at) VALUES (?,?,?,?,?,1,1,?)").bind(crypto.randomUUID(), recordId, relationship.label, relationship.type, row.url, now)),
@@ -198,10 +210,14 @@ export async function aiUsageToday(): Promise<{ calls: number; inputTokens: numb
   return { calls: row?.calls ?? 0, inputTokens: row?.input_tokens ?? 0, outputTokens: row?.output_tokens ?? 0, estimatedCostUsd: row?.estimated_cost_usd ?? 0 };
 }
 
-export async function listDuplicateCandidates(limit = 1000): Promise<Array<{ id: string; title: string; caseName?: string; neutralCitation?: string; decisionDate?: string; court?: string }>> {
+export async function listDuplicateCandidates(limit = 1000): Promise<Array<{ id: string; title: string; caseName?: string; neutralCitation?: string; courtFileNumber?: string; decisionDate?: string; year?: number; court?: string; officialDecisionUrl?: string }>> {
   await ensureSchema();
-  const result = await getDb().prepare("SELECT id,title,citation,decision_date,court FROM legal_records WHERE record_type='CASE' ORDER BY updated_at DESC LIMIT ?").bind(Math.min(5000, Math.max(1, limit))).all<Record<string, unknown>>();
-  return result.results.map((row) => ({ id: String(row.id), title: String(row.title), caseName: String(row.title), neutralCitation: row.citation ? String(row.citation) : undefined, decisionDate: row.decision_date ? String(row.decision_date) : undefined, court: row.court ? String(row.court) : undefined }));
+  const result = await getDb().prepare("SELECT id,title,citation,decision_date,court,payload_json FROM legal_records WHERE record_type='CASE' ORDER BY updated_at DESC LIMIT ?").bind(Math.min(5000, Math.max(1, limit))).all<Record<string, unknown>>();
+  return result.results.map((row) => {
+    const payload = parse<Record<string, unknown>>(row.payload_json, {});
+    const decisionDate = row.decision_date ? String(row.decision_date) : undefined;
+    return { id: String(row.id), title: String(row.title), caseName: String(row.title), neutralCitation: row.citation ? String(row.citation) : undefined, courtFileNumber: typeof payload.courtFileNumber === "string" ? payload.courtFileNumber : undefined, decisionDate, year: typeof payload.year === "number" ? payload.year : decisionDate ? Number(decisionDate.slice(0, 4)) : undefined, court: row.court ? String(row.court) : undefined, officialDecisionUrl: typeof payload.officialDecisionUrl === "string" ? payload.officialDecisionUrl : undefined };
+  });
 }
 
 export async function getCachedDocument(normalizedUrl: string): Promise<{ contentHash: string; etag?: string; lastModified?: string } | null> {

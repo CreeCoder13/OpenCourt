@@ -47,7 +47,19 @@ export const SEARCH_TEMPLATES = [
   '"{term}" court of appeal Indigenous',
 ] as const;
 
-export function buildSearchQueries(offset = 0, limit = 25): string[] {
+export interface SearchFilters { topic?: string; year?: number; ongoing?: boolean }
+
+export function buildSearchQueries(offset = 0, limit = 25, filters: SearchFilters = {}): string[] {
+  const suffix = [filters.year ? String(filters.year) : "", filters.ongoing ? "filed hearing appeal pending" : ""].filter(Boolean).join(" ");
+  if (filters.topic?.trim()) {
+    const topic = filters.topic.trim().slice(0, 100).replace(/["\r\n]/g, " ");
+    return [
+      `"${topic}" Indigenous Canada court ${suffix}`,
+      `"${topic}" site:decisions.scc-csc.ca ${suffix}`,
+      `"${topic}" site:decisions.fct-cf.gc.ca ${suffix}`,
+      `"${topic}" site:canlii.org ${suffix}`,
+    ].slice(offset, offset + Math.max(0, Math.min(limit, 100)));
+  }
   const topicTerms = [...INDIGENOUS_TERMS, ...LEGAL_TERMS].filter((term) => term.length > 4);
   const queries: string[] = [];
   for (const term of topicTerms) {
@@ -57,5 +69,5 @@ export function buildSearchQueries(offset = 0, limit = 25): string[] {
     queries.push(`"${seed}" related cases Indigenous law Canada`);
     queries.push(`"${seed}" cited by court Canada`);
   }
-  return [...new Set(queries)].slice(offset, offset + Math.max(0, Math.min(limit, 100)));
+  return [...new Set(queries.map((query) => `${query} ${suffix}`.trim()))].slice(offset, offset + Math.max(0, Math.min(limit, 100)));
 }

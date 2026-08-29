@@ -5,6 +5,7 @@ import { normalizeUrl, sha256 } from "./normalize";
 import { isAllowedByRobots } from "./robots";
 import { findTrustedDomain } from "./trustedDomains";
 import { DomainRateLimiter } from "./rateLimiter";
+import { fetchWithRetry } from "./http";
 
 const USER_AGENT = "OpenCourtBot/1.0 (+https://opencourt.ca/about; legal-research discovery)";
 const limiter = new DomainRateLimiter();
@@ -27,7 +28,7 @@ async function extractPdf(bytes: ArrayBuffer, sourceUrl: string): Promise<{ text
   const headers: Record<string, string> = { "Content-Type": "application/pdf", "X-Source-URL": sourceUrl };
   const token = process.env.PDF_TEXT_EXTRACTOR_TOKEN?.trim();
   if (token) headers.Authorization = `Bearer ${token}`;
-  const response = await fetch(endpoint, { method: "POST", headers, body: bytes });
+  const response = await fetchWithRetry(endpoint, { method: "POST", headers, body: bytes }, { attempts: 2, timeoutMs: 30_000 });
   if (!response.ok) throw new Error(`PDF extraction service failed with HTTP ${response.status}`);
   const result = await response.json() as { text?: unknown; ocrUsed?: unknown };
   if (typeof result.text !== "string") throw new Error("PDF extraction service returned invalid output");
@@ -48,7 +49,7 @@ export async function fetchDocument(url: string): Promise<FetchedDocument> {
   let robotsBody = cachedRobots?.checkedAt && Date.now() - Date.parse(cachedRobots.checkedAt) < 86_400_000 ? (cachedRobots.body ?? "") : undefined;
   if (robotsBody === undefined) {
     const robotsUrl = `${parsed.protocol}//${parsed.host}/robots.txt`;
-    const robotsResponse = await fetch(robotsUrl, { headers: { "User-Agent": USER_AGENT }, redirect: "follow" });
+    const robotsResponse = await fetchWithRetry(robotsUrl, { headers: { "User-Agent": USER_AGENT }, redirect: "follow" });
     if (robotsResponse.status === 401 || robotsResponse.status === 403) {
       await saveRobotsState(parsed.hostname, "RESTRICTED");
       throw new Error("Cannot confirm crawl permission because robots.txt is access-restricted");
@@ -66,7 +67,7 @@ export async function fetchDocument(url: string): Promise<FetchedDocument> {
   const headers: Record<string, string> = { "User-Agent": USER_AGENT, Accept: "text/html,application/xhtml+xml,application/pdf,application/xml,text/xml;q=0.9,*/*;q=0.2" };
   if (cached?.etag) headers["If-None-Match"] = cached.etag;
   if (cached?.lastModified) headers["If-Modified-Since"] = cached.lastModified;
-  const response = await fetch(normalizedUrl, { headers, redirect: "follow" });
+  const response = await fetchWithRetry(normalizedUrl, { headers, redirect: "follow" });
   if (response.status === 304 && cached) return { normalizedUrl, text: "", contentHash: cached.contentHash, mimeType: "", citations: [], extractionMethod: "NOT_MODIFIED", notModified: true, links: [] };
   if (!response.ok) throw new Error(`Source fetch failed with HTTP ${response.status}`);
   const length = Number(response.headers.get("content-length") ?? 0);

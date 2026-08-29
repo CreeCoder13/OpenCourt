@@ -49,10 +49,11 @@ export interface CourtCaseRecord {
   shortName?: string;
   neutralCitation?: string;
   reportedCitation?: string;
+  courtFileNumber?: string;
   court: string;
   jurisdiction: string;
-  decisionDate: string;
-  year: number;
+  decisionDate?: string;
+  year?: number;
   judges: string[];
   majorityAuthor?: string;
   parties: string[];
@@ -76,6 +77,11 @@ export interface CourtCaseRecord {
   impactScore: number;
   impactReasons: string[];
   currentLegalStatus: string;
+  caseType?: "past" | "ongoing";
+  proceduralStage?: string;
+  latestDevelopment?: string;
+  latestDevelopmentDate?: string;
+  upcomingHearingDate?: string;
   officialDecisionUrl?: string;
   canLIIUrl?: string;
   additionalSources: EvidenceSource[];
@@ -200,6 +206,7 @@ export interface AiClassification {
   citations: string[];
   verificationNeeded: string[];
   court: string | null;
+  courtFileNumber: string | null;
   decisionDate: string | null;
   neutralCitation: string | null;
   legislationCitation: string | null;
@@ -209,4 +216,8 @@ export interface AiClassification {
   casesCited: string[];
   treatiesReferenced: string[];
   impactSignals: string[];
+  proceduralStage: string | null;
+  latestDevelopment: string | null;
+  latestDevelopmentDate: string | null;
+  upcomingHearingDate: string | null;
 }

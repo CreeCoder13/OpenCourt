@@ -1,4 +1,5 @@
 import "server-only";
+import { fetchWithRetry } from "./http";
 
 export interface SearchResult { url: string; title?: string; snippet?: string }
 
@@ -9,7 +10,7 @@ export async function searchWeb(query: string, count = 10): Promise<SearchResult
   const url = new URL(endpoint);
   url.searchParams.set("q", query);
   url.searchParams.set("count", String(Math.min(20, Math.max(1, count))));
-  const response = await fetch(url, { headers: { "Ocp-Apim-Subscription-Key": apiKey, Authorization: `Bearer ${apiKey}`, Accept: "application/json" } });
+  const response = await fetchWithRetry(url, { headers: { "Ocp-Apim-Subscription-Key": apiKey, Authorization: `Bearer ${apiKey}`, Accept: "application/json" } });
   if (!response.ok) throw new Error(`Search provider failed with HTTP ${response.status}`);
   const body = await response.json() as Record<string, unknown>;
   const webPages = body.webPages as Record<string, unknown> | undefined;

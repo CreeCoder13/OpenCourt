@@ -15,7 +15,8 @@ export function validateAiClassification(value: unknown): value is AiClassificat
     && Array.isArray(item.categories) && item.categories.every((category) => categorySet.has(String(category)))
     && nullableString(item.proposedTitle) && nullableString(item.summary)
     && stringArray(item.significanceSignals) && stringArray(item.nations) && stringArray(item.citations) && stringArray(item.verificationNeeded)
-    && nullableString(item.court) && nullableString(item.decisionDate) && nullableString(item.neutralCitation) && nullableString(item.legislationCitation)
+    && nullableString(item.court) && nullableString(item.courtFileNumber) && nullableString(item.decisionDate) && nullableString(item.neutralCitation) && nullableString(item.legislationCitation)
     && stringArray(item.parties) && stringArray(item.constitutionalSections) && stringArray(item.legislationReferenced)
-    && stringArray(item.casesCited) && stringArray(item.treatiesReferenced) && stringArray(item.impactSignals);
+    && stringArray(item.casesCited) && stringArray(item.treatiesReferenced) && stringArray(item.impactSignals)
+    && nullableString(item.proceduralStage) && nullableString(item.latestDevelopment) && nullableString(item.latestDevelopmentDate) && nullableString(item.upcomingHearingDate);
 }

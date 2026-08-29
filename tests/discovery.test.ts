@@ -9,6 +9,10 @@ import { DomainRateLimiter } from "../lib/discovery/rateLimiter.ts";
 import { assessRelevance } from "../lib/discovery/relevance.ts";
 import { tierForUrl } from "../lib/discovery/trustedDomains.ts";
 import { canPublish, determineVerification } from "../lib/discovery/verification.ts";
+import { classifyCaseStatus } from "../lib/discovery/caseStatus.ts";
+import { extractHtml } from "../lib/discovery/extract.ts";
+import { fetchWithRetry } from "../lib/discovery/http.ts";
+import { mergeWithoutDowngrade } from "../lib/discovery/merge.ts";
 
 test("normalizes discovery URLs without tracking or fragments", () => {
   assert.equal(normalizeUrl("http://WWW.CanLII.org/en/ca/scc/doc/2014/2014scc44/2014scc44.html/?utm_source=x&b=2&a=1#para1"), "https://canlii.org/en/ca/scc/doc/2014/2014scc44/2014scc44.html?a=1&b=2");
@@ -43,6 +47,20 @@ test("duplicate detection uses neutral citations and guarded fuzzy matching", ()
   assert.ok(titleSimilarity("R. v. Sparrow", "R v Sparrow") > 0.85);
 });
 
+test("duplicate detection follows file-number, name/year, and official-URL fallbacks", () => {
+  const existing = [{ id: "existing", caseName: "Example First Nation v Canada", courtFileNumber: "T-123-25", year: 2025, officialDecisionUrl: "https://decisions.fct-cf.gc.ca/example/" }];
+  assert.match(findDuplicate({ id: "a", courtFileNumber: "t-123-25" }, existing).reasons[0], /file number/);
+  assert.ok(findDuplicate({ id: "b", caseName: "Example First Nation v. Canada", year: 2025 }, existing).duplicateOf);
+  assert.match(findDuplicate({ id: "c", officialDecisionUrl: "https://decisions.fct-cf.gc.ca/example#p1" }, existing).reasons[0], /URL/);
+});
+
+test("ongoing classification never ignores a released final decision unless an appeal is confirmed", () => {
+  assert.equal(classifyCaseStatus({ decisionDate: "2025-01-10", proceduralStage: "decision released" }).status, "DECIDED");
+  assert.equal(classifyCaseStatus({ decisionDate: "2025-01-10", latestDevelopment: "notice of appeal filed" }).status, "APPEAL_PENDING");
+  assert.equal(classifyCaseStatus({ upcomingHearingDate: "2026-10-01", proceduralStage: "hearing scheduled" }).status, "ONGOING");
+  assert.equal(classifyCaseStatus({}).status, "NEEDS_REVIEW");
+});
+
 test("parses Canadian neutral, reported and statutory citations", () => {
   const parsed = parseLegalCitations("See 2014 SCC 44, [1990] 1 S.C.R. 1075 and S.C. 2021, c. 14.");
   assert.ok(parsed.some((item) => item.citation === "2014 SCC 44" && item.kind === "NEUTRAL"));
@@ -58,8 +76,34 @@ test("verification requires authoritative evidence and core identifiers", () => 
   assert.equal(canPublish("VERIFIED_PRIMARY"), true);
 });
 
+test("missing core information cannot be marked verified", () => {
+  const source = { url: "https://decisions.scc-csc.ca/example", tier: 1 as const, sourceType: "JUDGMENT" as const, supports: [], authoritative: true };
+  assert.equal(determineVerification({ sources: [source], title: "Unconfirmed matter" }).level, "PARTIALLY_VERIFIED");
+});
+
+test("malformed HTML is sanitized and does not execute or retain script content", () => {
+  const result = extractHtml("<title>Case &amp; test</title><script>danger()</script><p>Reasons <b>allowed</b>");
+  assert.equal(result.title, "Case & test");
+  assert.equal(result.text.includes("danger"), false);
+  assert.match(result.text, /Reasons allowed/);
+});
+
+test("request retries stop and surface parser fetch failures", async () => {
+  let calls = 0;
+  const fetcher = async () => { calls += 1; throw new Error("network unavailable"); };
+  await assert.rejects(() => fetchWithRetry("https://example.test", {}, { attempts: 2, timeoutMs: 1_000, fetcher: fetcher as typeof fetch }), /network unavailable/);
+  assert.equal(calls, 2);
+});
+
+test("lower-confidence extraction cannot replace reviewed information", () => {
+  const existing = { courtDecision: "Reviewed outcome", verificationSources: [{ url: "https://court.example/judgment" }] };
+  const merged = mergeWithoutDowngrade(existing, { courtDecision: "AI guess", verificationSources: [{ url: "https://news.example/story" }] }, "VERIFIED_PRIMARY", "UNVERIFIED");
+  assert.equal(merged.courtDecision, "Reviewed outcome");
+  assert.equal(merged.verificationSources.length, 2);
+});
+
 test("AI output validation rejects unknown categories and malformed confidence", () => {
-  const valid = { relevance: "RELEVANT", confidence: 0.91, recordType: "CASE", categories: ["Section 35"], proposedTitle: "Example", summary: "A document-grounded summary.", significanceSignals: [], nations: [], citations: ["2024 SCC 1"], verificationNeeded: [], court: "Supreme Court of Canada", decisionDate: "2024-01-01", neutralCitation: "2024 SCC 1", legislationCitation: null, parties: [], constitutionalSections: ["s. 35"], legislationReferenced: [], casesCited: [], treatiesReferenced: [], impactSignals: [] };
+  const valid = { relevance: "RELEVANT", confidence: 0.91, recordType: "CASE", categories: ["Section 35"], proposedTitle: "Example", summary: "A document-grounded summary.", significanceSignals: [], nations: [], citations: ["2024 SCC 1"], verificationNeeded: [], court: "Supreme Court of Canada", courtFileNumber: null, decisionDate: "2024-01-01", neutralCitation: "2024 SCC 1", legislationCitation: null, parties: [], constitutionalSections: ["s. 35"], legislationReferenced: [], casesCited: [], treatiesReferenced: [], impactSignals: [], proceduralStage: null, latestDevelopment: null, latestDevelopmentDate: null, upcomingHearingDate: null };
   assert.equal(validateAiClassification(valid), true);
   assert.equal(validateAiClassification({ ...valid, categories: ["Invented category"] }), false);
   assert.equal(validateAiClassification({ ...valid, confidence: 2 }), false);

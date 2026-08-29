@@ -1,0 +1,51 @@
+name: OpenCourt case ingestion
+
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: Optional decision or filing year
+        required: false
+        type: string
+      topic:
+        description: Optional legal topic
+        required: false
+        type: string
+      ongoing:
+        description: Focus discovery on active proceedings
+        required: false
+        default: false
+        type: boolean
+      dry_run:
+        description: Stage discoveries without seeding main records
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22.13.0"
+      - name: Run bounded ingestion batch
+        env:
+          OPENCOURT_DISCOVERY_URL: ${{ secrets.OPENCOURT_DISCOVERY_URL }}
+          DISCOVERY_CRON_SECRET: ${{ secrets.DISCOVERY_CRON_SECRET }}
+          INPUT_YEAR: ${{ inputs.year }}
+          INPUT_TOPIC: ${{ inputs.topic }}
+          INPUT_ONGOING: ${{ inputs.ongoing }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        shell: bash
+        run: |
+          args=()
+          [[ -n "$INPUT_YEAR" ]] && args+=("--year=$INPUT_YEAR")
+          [[ -n "$INPUT_TOPIC" ]] && args+=("--topic=$INPUT_TOPIC")
+          [[ "$INPUT_ONGOING" == "true" ]] && args+=("--ongoing")
+          [[ "$INPUT_DRY_RUN" == "true" ]] && args+=("--dry-run")
+          npm run ingest:cases -- "${args[@]}"

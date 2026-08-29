@@ -30,6 +30,26 @@ The protected `POST /api/discovery/run` endpoint seeds trusted records, rotates 
 
 The current endpoint implements the incremental/daily batch. Weekly and monthly invocations use the same queue and should be extended with source-specific citation and consolidation adapters. Hosting does not infer a schedule from this repository; configure the schedule in the deployment platform or an external scheduler.
 
+### Local and manual runs
+
+The CLI calls the protected deployed discovery endpoint, which keeps D1/R2 access server-side:
+
+```bash
+npm run ingest:cases
+npm run ingest:cases -- --year=2025
+npm run ingest:cases -- --topic="duty to consult"
+npm run ingest:cases -- --ongoing
+npm run ingest:cases -- --dry-run
+```
+
+`--dry-run` still writes fetched candidates to the isolated discovery/review queue so they can be inspected, but it does not seed or change the main `legal_records` collection. Discovery never publishes a fetched result directly. A record moves from `DISCOVERED` through extraction and verification to `REVIEW`; an authenticated editor must then publish it. Probable duplicates and records below primary verification are blocked from publication.
+
+The CLI requires `OPENCOURT_DISCOVERY_URL` and `DISCOVERY_CRON_SECRET`. Server-side ingestion additionally requires the configured D1 `DB` and R2 `DOCUMENTS` bindings. `OPENC_API_KEY` is required for AI-assisted extraction, while `OPENCOURT_SEARCH_ENDPOINT` and `OPENCOURT_SEARCH_API_KEY` enable broad search and the PDF variables remain optional. The manual `OpenCourt case ingestion` GitHub Action is intentionally unscheduled and defaults to dry-run.
+
+Duplicate checks run in this order: normalized neutral citation, court file number, normalized case name plus year, and normalized official decision URL. A probable duplicate stays in review and cannot be promoted as a second record. Published records accept an automated replacement only when the incoming verification level is strictly stronger; attached source evidence is retained with the promoted payload.
+
+Ongoing status is conservative. An explicit appeal or leave proceeding remains ongoing, an officially listed hearing can establish an active matter, and a released final decision is treated as decided unless an appeal is confirmed. Ambiguous status is marked for review rather than guessed.
+
 ## AI use and cost controls
 
 All AI requests are made from `lib/server/aiDiscovery.ts` using `process.env.OPENC_API_KEY`. The request uses Structured Outputs, disables response storage, truncates supplied document text to a fixed bound, validates every response, and caches by document hash, task and model. The browser never imports the server module, receives the key, or receives it in an API response.
