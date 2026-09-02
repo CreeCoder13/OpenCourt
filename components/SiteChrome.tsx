@@ -1,20 +1,21 @@
 import Link from "next/link";
+import type { ComponentPropsWithoutRef } from "react";
 
-const nav = [
-  ["Timeline", "/timeline"], ["Cases", "/cases"], ["Laws", "/laws"], ["Indigenous Communities", "/communities"],
-  ["Legal Definitions", "/topics"], ["Treaties", "/treaties"],
-];
+import { primaryNavigation } from "../data/navigation";
+
+function DocumentNavigationLink({ href, ...props }: ComponentPropsWithoutRef<"a"> & { href: string }) {
+  // Native links deliberately bypass client routing, which is unreliable in the deployed worker.
+  return <a {...props} href={href} />;
+}
 
 export function SiteHeader() {
   return (
     <header className="site-header inner-header">
-      <form className="brand-home-form" action="/" method="get">
-        <button className="brand brand-home-button" type="submit" aria-label="OpenCourt home" title="Return to the OpenCourt home page"><span className="brand-mark">OC</span><span className="brand-copy"><span>OpenCourt</span><small>Canadian Indigenous Case Law</small></span></button>
-      </form>
-      <nav className="desktop-nav" aria-label="Primary navigation">{nav.map(([label, href]) => <a href={href} key={href}>{label}</a>)}</nav>
+      <DocumentNavigationLink className="brand" href="/" aria-label="OpenCourt home" title="Return to the OpenCourt home page"><span className="brand-mark">OC</span><span className="brand-copy"><span>OpenCourt</span><small>Canadian Indigenous Case Law</small></span></DocumentNavigationLink>
+      <nav className="desktop-nav" aria-label="Primary navigation">{primaryNavigation.map(([label, href]) => <DocumentNavigationLink href={href} key={href}>{label}</DocumentNavigationLink>)}</nav>
       <details className="mobile-nav">
         <summary>Menu</summary>
-        <nav aria-label="Mobile navigation">{nav.map(([label, href]) => <a href={href} key={href}>{label}</a>)}<a href="/about">About</a><a href="/sources">Sources</a></nav>
+        <nav aria-label="Mobile navigation">{primaryNavigation.map(([label, href]) => <DocumentNavigationLink href={href} key={href}>{label}</DocumentNavigationLink>)}<DocumentNavigationLink href="/about">About</DocumentNavigationLink><DocumentNavigationLink href="/sources">Sources</DocumentNavigationLink></nav>
       </details>
     </header>
   );
