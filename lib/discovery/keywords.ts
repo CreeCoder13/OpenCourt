@@ -1,3 +1,5 @@
+import { officialCaseSearchDomains } from "./officialSources.ts";
+
 export const INDIGENOUS_TERMS = [
   "indigenous", "aboriginal", "first nation", "first nations", "métis", "metis", "inuit", "innu",
   "cree", "dene", "anishinaabe", "mi'kmaq", "mi’kmaq", "mi'kmaw", "mi’kmaw", "haida",
@@ -47,18 +49,35 @@ export const SEARCH_TEMPLATES = [
   '"{term}" court of appeal Indigenous',
 ] as const;
 
+export const CASE_TOPIC_CLUSTERS = [
+  "Aboriginal title section 35", "Aboriginal rights section 35", "treaty rights interpretation",
+  "duty to consult accommodate", "First Nation reserve lands", "First Nations child family services",
+  "Métis rights harvesting", "Inuit rights Nunavut", "Indigenous self-government jurisdiction",
+  "specific claims land claims", "Indigenous hunting fishing rights", "Indian Act litigation",
+  "Indigenous taxation section 87", "Indigenous resource development", "UNDRIP Indigenous rights",
+  "Gladue Indigenous sentencing", "honour of the Crown fiduciary duty", "modern treaty implementation",
+  "Indigenous environmental assessment", "band council election governance",
+] as const;
+
+function circularSlice<T>(values: T[], offset: number, limit: number): T[] {
+  if (!values.length || limit <= 0) return [];
+  const start = ((offset % values.length) + values.length) % values.length;
+  return Array.from({ length: Math.min(limit, values.length) }, (_, index) => values[(start + index) % values.length]);
+}
+
 export interface SearchFilters { topic?: string; year?: number; ongoing?: boolean }
 
 export function buildSearchQueries(offset = 0, limit = 25, filters: SearchFilters = {}): string[] {
   const suffix = [filters.year ? String(filters.year) : "", filters.ongoing ? "filed hearing appeal pending" : ""].filter(Boolean).join(" ");
   if (filters.topic?.trim()) {
     const topic = filters.topic.trim().slice(0, 100).replace(/["\r\n]/g, " ");
-    return [
+    return circularSlice([
       `"${topic}" Indigenous Canada court ${suffix}`,
       `"${topic}" site:decisions.scc-csc.ca ${suffix}`,
       `"${topic}" site:decisions.fct-cf.gc.ca ${suffix}`,
       `"${topic}" site:canlii.org ${suffix}`,
-    ].slice(offset, offset + Math.max(0, Math.min(limit, 100)));
+      ...officialCaseSearchDomains.map((domain) => `site:${domain} "${topic}" ${suffix}`.trim()),
+    ], offset, Math.max(0, Math.min(limit, 100)));
   }
   const topicTerms = [...INDIGENOUS_TERMS, ...LEGAL_TERMS].filter((term) => term.length > 4);
   const queries: string[] = [];
@@ -69,5 +88,8 @@ export function buildSearchQueries(offset = 0, limit = 25, filters: SearchFilter
     queries.push(`"${seed}" related cases Indigenous law Canada`);
     queries.push(`"${seed}" cited by court Canada`);
   }
-  return [...new Set(queries.map((query) => `${query} ${suffix}`.trim()))].slice(offset, offset + Math.max(0, Math.min(limit, 100)));
+  for (const domain of officialCaseSearchDomains) {
+    for (const cluster of CASE_TOPIC_CLUSTERS) queries.push(`site:${domain} "${cluster}" ${suffix}`.trim());
+  }
+  return circularSlice([...new Set(queries.map((query) => `${query} ${suffix}`.trim()))], offset, Math.max(0, Math.min(limit, 100)));
 }

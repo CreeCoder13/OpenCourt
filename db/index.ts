@@ -210,6 +210,20 @@ export async function aiUsageToday(): Promise<{ calls: number; inputTokens: numb
   return { calls: row?.calls ?? 0, inputTokens: row?.input_tokens ?? 0, outputTokens: row?.output_tokens ?? 0, estimatedCostUsd: row?.estimated_cost_usd ?? 0 };
 }
 
+export async function startScanRun(triggerType: string): Promise<string> {
+  await ensureSchema();
+  const id = crypto.randomUUID();
+  await getDb().prepare("INSERT INTO scan_runs (id,trigger_type,started_at,status) VALUES (?,?,?,'RUNNING')")
+    .bind(id, triggerType.slice(0, 40), new Date().toISOString()).run();
+  return id;
+}
+
+export async function finishScanRun(id: string, result: { queriesRun: number; urlsDiscovered: number; documentsProcessed: number; status?: "COMPLETED" | "FAILED"; error?: string }): Promise<void> {
+  await ensureSchema();
+  await getDb().prepare("UPDATE scan_runs SET completed_at=?,queries_run=?,urls_discovered=?,documents_processed=?,status=?,error=? WHERE id=?")
+    .bind(new Date().toISOString(), result.queriesRun, result.urlsDiscovered, result.documentsProcessed, result.status ?? "COMPLETED", result.error?.slice(0, 2000) ?? null, id).run();
+}
+
 export async function listDuplicateCandidates(limit = 1000): Promise<Array<{ id: string; title: string; caseName?: string; neutralCitation?: string; courtFileNumber?: string; decisionDate?: string; year?: number; court?: string; officialDecisionUrl?: string }>> {
   await ensureSchema();
   const result = await getDb().prepare("SELECT id,title,citation,decision_date,court,payload_json FROM legal_records WHERE record_type='CASE' ORDER BY updated_at DESC LIMIT ?").bind(Math.min(5000, Math.max(1, limit))).all<Record<string, unknown>>();
@@ -218,6 +232,13 @@ export async function listDuplicateCandidates(limit = 1000): Promise<Array<{ id:
     const decisionDate = row.decision_date ? String(row.decision_date) : undefined;
     return { id: String(row.id), title: String(row.title), caseName: String(row.title), neutralCitation: row.citation ? String(row.citation) : undefined, courtFileNumber: typeof payload.courtFileNumber === "string" ? payload.courtFileNumber : undefined, decisionDate, year: typeof payload.year === "number" ? payload.year : decisionDate ? Number(decisionDate.slice(0, 4)) : undefined, court: row.court ? String(row.court) : undefined, officialDecisionUrl: typeof payload.officialDecisionUrl === "string" ? payload.officialDecisionUrl : undefined };
   });
+}
+
+export async function listPublishedCasePayloads(limit = 2000): Promise<Array<{ payload: Record<string, unknown>; verification: VerificationLevel; updatedAt: string }>> {
+  await ensureSchema();
+  const result = await getDb().prepare("SELECT payload_json,verification,updated_at FROM legal_records WHERE record_type='CASE' AND published_at IS NOT NULL ORDER BY impact_score DESC,decision_date DESC LIMIT ?")
+    .bind(Math.min(5000, Math.max(1, limit))).all<{ payload_json: string; verification: VerificationLevel; updated_at: string }>();
+  return result.results.map((row) => ({ payload: parse<Record<string, unknown>>(row.payload_json, {}), verification: row.verification, updatedAt: row.updated_at }));
 }
 
 export async function getCachedDocument(normalizedUrl: string): Promise<{ contentHash: string; etag?: string; lastModified?: string } | null> {

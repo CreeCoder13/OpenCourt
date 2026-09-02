@@ -5,7 +5,9 @@ export const trustedDomains = rawDomains as TrustedDomain[];
 
 export function findTrustedDomain(hostname: string): TrustedDomain | undefined {
   const host = hostname.toLowerCase().replace(/^www\./, "");
-  return trustedDomains.find((item) => host === item.domain || host.endsWith(`.${item.domain}`));
+  return trustedDomains
+    .filter((item) => host === item.domain || host.endsWith(`.${item.domain}`))
+    .sort((left, right) => right.domain.length - left.domain.length)[0];
 }
 
 export function tierForUrl(url: string): 1 | 2 | 3 {

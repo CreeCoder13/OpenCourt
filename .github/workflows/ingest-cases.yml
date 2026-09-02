@@ -21,6 +21,16 @@ on:
         required: false
         default: true
         type: boolean
+      backfill:
+        description: Scan all registered courts and rotate through the historical topic matrix
+        required: false
+        default: false
+        type: boolean
+      runs:
+        description: Number of bounded batches (1-20)
+        required: false
+        default: "1"
+        type: string
 
 permissions:
   contents: read
@@ -41,6 +51,8 @@ jobs:
           INPUT_TOPIC: ${{ inputs.topic }}
           INPUT_ONGOING: ${{ inputs.ongoing }}
           INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          INPUT_BACKFILL: ${{ inputs.backfill }}
+          INPUT_RUNS: ${{ inputs.runs }}
         shell: bash
         run: |
           args=()
@@ -48,4 +60,6 @@ jobs:
           [[ -n "$INPUT_TOPIC" ]] && args+=("--topic=$INPUT_TOPIC")
           [[ "$INPUT_ONGOING" == "true" ]] && args+=("--ongoing")
           [[ "$INPUT_DRY_RUN" == "true" ]] && args+=("--dry-run")
+          [[ "$INPUT_BACKFILL" == "true" ]] && args+=("--backfill")
+          [[ -n "$INPUT_RUNS" ]] && args+=("--runs=$INPUT_RUNS")
           npm run ingest:cases -- "${args[@]}"

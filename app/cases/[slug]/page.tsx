@@ -3,29 +3,33 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Breadcrumbs, PageShell, VerificationBadge } from "../../../components/SiteChrome";
 import { CaseStatusBadge, OutcomeBadge } from "../../../components/CaseCard";
-import { allCases, caseByAnySlug } from "../../../data/cases";
+import { allCases } from "../../../data/cases";
+import { getPublicCaseBySlug, getPublicCases } from "../../../lib/server/publicCases";
 
 export function generateStaticParams() { return allCases.map((item) => ({ slug: item.slug })); }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const item = caseByAnySlug(slug);
+  const item = await getPublicCaseBySlug(slug);
   if (!item) return { title: "Case not found | OpenCourt" };
-  const year = new Date(`${item.decisionDate}T00:00:00`).getFullYear();
+  const year = item.decisionDate ? new Date(`${item.decisionDate}T00:00:00`).getFullYear() : undefined;
   return {
-    title: `${item.caseName} (${year}) | Indigenous Case Database`,
+    title: `${item.caseName}${year ? ` (${year})` : ""} | Indigenous Case Database`,
     description: item.summaryShort,
-    openGraph: { title: `${item.caseName} (${year}) | OpenCourt`, description: item.summaryShort, images: [] },
-    twitter: { card: "summary", title: `${item.caseName} (${year}) | OpenCourt`, description: item.summaryShort, images: [] },
+    openGraph: { title: `${item.caseName}${year ? ` (${year})` : ""} | OpenCourt`, description: item.summaryShort, images: [] },
+    twitter: { card: "summary", title: `${item.caseName}${year ? ` (${year})` : ""} | OpenCourt`, description: item.summaryShort, images: [] },
   };
 }
 
 export default async function CasePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const item = caseByAnySlug(slug);
+  const records = await getPublicCases();
+  const item = records.find((record) => record.slug === slug);
   if (!item) notFound();
   const isOngoing = item.caseType === "ongoing" || item.status !== "Decided";
-  const related = item.relatedCases.map((relation) => ({ relation, item: caseByAnySlug(relation.caseSlug) })).filter((entry) => entry.item);
+  const related = item.relatedCases.map((relation) => ({ relation, item: records.find((record) => record.slug === relation.caseSlug) })).filter((entry) => entry.item);
+  const eventDate = isOngoing ? item.filingDate || item.latestDevelopmentDate || item.decisionDate : item.decisionDate;
+  const displayedDate = eventDate ? new Date(`${eventDate}T00:00:00`).toLocaleDateString("en-CA", { day: "numeric", month: "long", year: "numeric" }) : "Not publicly available";
   return (
     <PageShell>
       <article>
@@ -33,7 +37,7 @@ export default async function CasePage({ params }: { params: Promise<{ slug: str
           <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Cases", href: "/cases" }, { label: item.caseName }]} />
           <div className="case-hero-top"><div><p className="kicker">{isOngoing ? "Ongoing court proceeding" : "Court decision"}</p><h1>{item.caseName}</h1><p className="case-official-citation">{item.officialCitation || item.courtFileNumber || "Citation not publicly available"}</p></div><div className="case-status-stack"><VerificationBadge level={item.verificationLevel} />{isOngoing ? <CaseStatusBadge status={item.currentStatus || item.status} /> : <OutcomeBadge outcome={item.outcome} />}</div></div>
           <dl className="case-facts-grid">
-            <div><dt>Court</dt><dd>{item.court}</dd></div><div><dt>{isOngoing ? "Filed" : "Decision date"}</dt><dd>{new Date(`${isOngoing ? item.filingDate || item.decisionDate : item.decisionDate}T00:00:00`).toLocaleDateString("en-CA", { day: "numeric", month: "long", year: "numeric" })}</dd></div><div><dt>Location</dt><dd>{item.provinceTerritory}</dd></div><div><dt>Case status</dt><dd>{item.currentStatus || item.status}</dd></div><div><dt>Indigenous parties</dt><dd>{item.indigenousCommunities.join(", ")}</dd></div><div><dt>Other parties</dt><dd>{item.parties.slice(1).join(", ") || "Not publicly available"}</dd></div>
+            <div><dt>Court</dt><dd>{item.court}</dd></div><div><dt>{isOngoing ? "Filed / latest event" : "Decision date"}</dt><dd>{displayedDate}</dd></div><div><dt>Location</dt><dd>{item.provinceTerritory}</dd></div><div><dt>Case status</dt><dd>{item.currentStatus || item.status}</dd></div><div><dt>Indigenous parties</dt><dd>{item.indigenousCommunities.join(", ") || "Not publicly available"}</dd></div><div><dt>Other parties</dt><dd>{item.parties.slice(1).join(", ") || "Not publicly available"}</dd></div>
           </dl>
           <div className="topic-row">{item.legalTopics.map((topic) => <Link href={`/topics/${topic.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/-$/g, "")}`} className="topic-pill" key={topic}>{topic}</Link>)}</div>
         </header>

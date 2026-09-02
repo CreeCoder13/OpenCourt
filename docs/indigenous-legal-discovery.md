@@ -40,6 +40,7 @@ npm run ingest:cases -- --year=2025
 npm run ingest:cases -- --topic="duty to consult"
 npm run ingest:cases -- --ongoing
 npm run ingest:cases -- --dry-run
+npm run ingest:cases -- --backfill --runs=8
 ```
 
 `--dry-run` still writes fetched candidates to the isolated discovery/review queue so they can be inspected, but it does not seed or change the main `legal_records` collection. Discovery never publishes a fetched result directly. A record moves from `DISCOVERED` through extraction and verification to `REVIEW`; an authenticated editor must then publish it. Probable duplicates and records below primary verification are blocked from publication.
@@ -49,6 +50,16 @@ The CLI requires `OPENCOURT_DISCOVERY_URL` and `DISCOVERY_CRON_SECRET`. Server-s
 Duplicate checks run in this order: normalized neutral citation, court file number, normalized case name plus year, and normalized official decision URL. A probable duplicate stays in review and cannot be promoted as a second record. Published records accept an automated replacement only when the incoming verification level is strictly stronger; attached source evidence is retained with the promoted payload.
 
 Ongoing status is conservative. An explicit appeal or leave proceeding remains ongoing, an officially listed hearing can establish an active matter, and a released final decision is treated as decided unless an appeal is confirmed. Ambiguous status is marked for review rather than guessed.
+
+### National court coverage and backfills
+
+The built-in monitor registry covers the Supreme Court of Canada, Federal Court and Federal Court of Appeal, every province and territory, and the corresponding CanLII jurisdiction indexes. It follows public judgment, recent-decision, case-information and court-index links only when allowed by each source's robots policy. `OPENCOURT_LINKS_PER_SOURCE` controls the bounded fan-out per official index (default 50, hard maximum 100).
+
+Broad search rotates through a matrix of authoritative court domains and Indigenous-law topics, including title, section 35, treaties, consultation, reserve lands, child services, Métis and Inuit rights, self-government, taxation, harvesting, UNDRIP, Gladue, resource development and the honour of the Crown. The circular rotation prevents later courts or topics from becoming unreachable at the end of a month.
+
+`--backfill --runs=8` executes eight sequential, bounded batches with distinct query offsets. Increase `--runs` up to 20 for a deliberate historical import. It is not scheduled automatically because each batch can consume search, document-extraction and AI quotas. Every run is recorded in `scan_runs`, while failures remain isolated so one unavailable court or search query does not stop the rest of the batch.
+
+Published D1 case records are now merged into the public `/cases` database at request time. The richer hand-edited static records win when a slug already exists; newly reviewed ingested records appear automatically after promotion. If the D1 binding is temporarily unavailable, the public site falls back to its verified static collection.
 
 ## AI use and cost controls
 

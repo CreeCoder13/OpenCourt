@@ -91,7 +91,7 @@ button,input { font:inherit; }
 .outcome-government-successful { color:#694a1a; background:#f3ead8; }
 .outcome-mixed-decision { color:#694b7c; background:#eee6f2; }
 .outcome-ongoing,.outcome-appeal-pending { color:#245b7b; background:#e2eff6; }
-.outcome-settled { color:#4e5955; background:#eaeeec; }
+.outcome-settled,.outcome-not-classified { color:#4e5955; background:#eaeeec; }
 
 /* Interior page headers */
 .page-hero { padding:44px max(28px,calc((100vw - 1184px)/2)) 76px; background:#eaf0ed; }

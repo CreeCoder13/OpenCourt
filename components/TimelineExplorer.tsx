@@ -23,7 +23,7 @@ const streams = [
 
 const slugify = (value: string) => value.toLowerCase().replace(/[’']/g, "").replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const yearOf = (item: CaseRecord) => Number(item.decisionDate.slice(0, 4));
-const outcomeLabel = (outcome: CaseRecord["outcome"]) => ({ "Nation Successful": "Indigenous Party Successful", "Mixed Decision": "Mixed Outcome", "Government Successful": "Government Successful", Ongoing: "Ongoing", "Appeal Pending": "Appeal Pending", Settled: "Settled" })[outcome];
+const outcomeLabel = (outcome: CaseRecord["outcome"]) => ({ "Nation Successful": "Indigenous Party Successful", "Mixed Decision": "Mixed Outcome", "Government Successful": "Government Successful", Ongoing: "Ongoing", "Appeal Pending": "Appeal Pending", Settled: "Settled", "Not Classified": "Outcome not classified" })[outcome];
 const outcomeClass = (outcome: CaseRecord["outcome"]) => outcome.toLowerCase().replaceAll(" ", "-");
 
 function CaseTimelineCard({ item, records }: { item: CaseRecord; records: CaseRecord[] }) {

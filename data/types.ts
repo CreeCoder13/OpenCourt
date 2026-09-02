@@ -1,6 +1,6 @@
 export type VerificationLevel = "Verified" | "Secondary Source" | "Needs Verification";
 export type ContentStatus = "Draft" | "Published" | "Needs Verification";
-export type CaseOutcome = "Nation Successful" | "Government Successful" | "Mixed Decision" | "Ongoing" | "Appeal Pending" | "Settled";
+export type CaseOutcome = "Nation Successful" | "Government Successful" | "Mixed Decision" | "Ongoing" | "Appeal Pending" | "Settled" | "Not Classified";
 export type OngoingCaseStatus =
   | "Filed"
   | "Awaiting response"
@@ -106,7 +106,7 @@ export interface CaseRecord {
   legalTopics: string[];
   treaties: string[];
   indigenousCommunities: string[];
-  indigenousGroup: "First Nations" | "Métis" | "Inuit";
+  indigenousGroup: "First Nations" | "Métis" | "Inuit" | "Other";
   parties: string[];
   judges: string[];
   importantQuotes: Quote[];

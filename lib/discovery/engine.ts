@@ -1,5 +1,5 @@
 import "server-only";
-import { claimNextDocument, enqueueDocument, listDuplicateCandidates, requeueMonitors, requeuePublishedForVerification, seedRecordRelationships, seedVerifiedRecords, updateDocument } from "../../db";
+import { claimNextDocument, enqueueDocument, finishScanRun, listDuplicateCandidates, requeueMonitors, requeuePublishedForVerification, seedRecordRelationships, seedVerifiedRecords, startScanRun, updateDocument } from "../../db";
 import { initialVerifiedCollection } from "../../data/initialCollection";
 import { classifyLegalDocument } from "../server/aiDiscovery";
 import { classifyCaseStatus } from "./caseStatus";
@@ -31,7 +31,7 @@ function emptyCandidate(url: string, discoveredBy: "SEARCH" | "SEED" | "SITEMAP"
   };
 }
 
-async function enqueueSeedsAndSearch(queryOffset: number, queryLimit: number, filters: { topic?: string; year?: number; ongoing?: boolean }): Promise<{ queriesRun: number; urlsDiscovered: number }> {
+async function enqueueSeedsAndSearch(queryOffset: number, queryLimit: number, filters: { topic?: string; year?: number; ongoing?: boolean }): Promise<{ queriesRun: number; urlsDiscovered: number; searchFailures: number }> {
   let urlsDiscovered = 0;
   for (const url of discoverySeedUrls) {
     try { if (await enqueueDocument(emptyCandidate(url, "SEED"))) urlsDiscovered += 1; } catch { /* malformed or previously queued seed */ }
@@ -39,19 +39,22 @@ async function enqueueSeedsAndSearch(queryOffset: number, queryLimit: number, fi
   for (const url of trustedMonitorUrls) {
     try { if (await enqueueDocument(emptyCandidate(url, "SITEMAP"))) urlsDiscovered += 1; } catch { /* malformed or previously queued monitor */ }
   }
-  const configuredFeeds = (process.env.OPENCOURT_FEED_URLS ?? "").split(",").map((value) => value.trim()).filter(Boolean).slice(0, 20);
+  const configuredFeeds = (process.env.OPENCOURT_FEED_URLS ?? "").split(",").map((value) => value.trim()).filter(Boolean).slice(0, 100);
   for (const url of configuredFeeds) {
     try { if (await enqueueDocument(emptyCandidate(url, "SITEMAP"))) urlsDiscovered += 1; } catch { /* malformed, untrusted or previously queued feed */ }
   }
   let queriesRun = 0;
+  let searchFailures = 0;
   for (const query of buildSearchQueries(queryOffset, queryLimit, filters)) {
-    const results = await searchWeb(query, 10);
-    queriesRun += 1;
-    for (const result of results) {
-      try { if (await enqueueDocument(emptyCandidate(result.url, "SEARCH", result.title, query))) urlsDiscovered += 1; } catch { /* reject malformed discovery URLs */ }
-    }
+    try {
+      const results = await searchWeb(query, 20);
+      queriesRun += 1;
+      for (const result of results) {
+        try { if (await enqueueDocument(emptyCandidate(result.url, "SEARCH", result.title, query))) urlsDiscovered += 1; } catch { /* reject malformed discovery URLs */ }
+      }
+    } catch { searchFailures += 1; }
   }
-  return { queriesRun, urlsDiscovered };
+  return { queriesRun, urlsDiscovered, searchFailures };
 }
 
 const includesSignal = (ai: AiClassification, pattern: RegExp) => ai.impactSignals.some((signal) => pattern.test(signal.toLowerCase()));
@@ -93,12 +96,14 @@ async function processOne(): Promise<ProcessOutcome> {
     const trusted = findTrustedDomain(candidate.sourceDomain);
     if (trusted && fetched.links.length) {
       let queuedLinks = 0;
+      const linkLimit = Math.min(100, Math.max(10, Number(process.env.OPENCOURT_LINKS_PER_SOURCE ?? 50)));
       for (const link of fetched.links) {
-        if (queuedLinks >= 25) break;
+        if (queuedLinks >= linkLimit) break;
         try {
           const target = new URL(link);
           const targetDomain = findTrustedDomain(target.hostname);
-          if (!targetDomain || targetDomain.domain !== trusted.domain || !/(item|doc|decision|judgment|acts?|laws?|bills?|treaty|agreement|publication|fulltext)/i.test(target.pathname + target.search)) continue;
+          const sameSourceFamily = targetDomain && (targetDomain.domain === trusted.domain || target.hostname.endsWith(`.${trusted.domain}`) || candidate.sourceDomain.endsWith(`.${targetDomain.domain}`));
+          if (!sameSourceFamily || !/(item|doc|decision|judgment|reason|case|docket|hearing|recent|acts?|laws?|bills?|treaty|agreement|publication|fulltext)/i.test(target.pathname + target.search)) continue;
           if (await enqueueDocument(emptyCandidate(link, "CRAWL"))) queuedLinks += 1;
         } catch { /* ignore malformed or unsupported links */ }
       }
@@ -154,10 +159,15 @@ async function processOne(): Promise<ProcessOutcome> {
   }
 }
 
-export async function runDiscoveryBatch(options: { queryOffset?: number; queryLimit?: number; processLimit?: number; topic?: string; year?: number; ongoing?: boolean; dryRun?: boolean } = {}) {
-  const queryOffset = Math.max(0, options.queryOffset ?? (new Date().getUTCDate() - 1) * 12);
-  const queryLimit = Math.min(25, Math.max(0, options.queryLimit ?? 12));
-  const processLimit = Math.min(25, Math.max(1, options.processLimit ?? 8));
+export async function runDiscoveryBatch(options: { queryOffset?: number; queryLimit?: number; processLimit?: number; topic?: string; year?: number; ongoing?: boolean; dryRun?: boolean; mode?: "incremental" | "broad" | "backfill" } = {}) {
+  const mode = options.mode ?? "broad";
+  const defaultQueryLimit = mode === "backfill" ? 25 : mode === "incremental" ? 8 : 12;
+  const defaultProcessLimit = mode === "backfill" ? 20 : 8;
+  const queryLimit = Math.min(25, Math.max(0, options.queryLimit ?? defaultQueryLimit));
+  const epochDay = Math.floor(Date.now() / 86_400_000);
+  const queryOffset = Math.max(0, options.queryOffset ?? epochDay * Math.max(1, queryLimit));
+  const processLimit = Math.min(25, Math.max(1, options.processLimit ?? defaultProcessLimit));
+  const scanRunId = await startScanRun(mode);
   const monitorsRequeued = await requeueMonitors(6);
   const publishedRequeued = await requeuePublishedForVerification(30);
   const seededRecords = options.dryRun ? 0 : (await seedVerifiedRecords(initialVerifiedCollection.cases as unknown as Array<Record<string, unknown> & { id: string; slug: string; impactScore: number; verified: "VERIFIED_PRIMARY" }>, "CASE"))
@@ -172,5 +182,7 @@ export async function runDiscoveryBatch(options: { queryOffset?: number; queryLi
     outcomes[outcome] += 1;
     documentsProcessed += 1;
   }
-  return { ...discovery, sourcesSearched: discovery.queriesRun, pagesChecked: documentsProcessed, caseCandidatesFound: outcomes.verified + outcomes.needs_review + outcomes.duplicate, duplicatesSkipped: outcomes.duplicate, verifiedCases: outcomes.verified, casesRequiringReview: outcomes.needs_review, casesAdded: 0, failures: outcomes.failed, rejected: outcomes.rejected, seededRecords, seededRelationships, monitorsRequeued, publishedRequeued, documentsProcessed, queryOffset, queryLimit, processLimit, dryRun: Boolean(options.dryRun) };
+  const result = { ...discovery, scanRunId, mode, sourcesSearched: discovery.queriesRun, pagesChecked: documentsProcessed, caseCandidatesFound: outcomes.verified + outcomes.needs_review + outcomes.duplicate, duplicatesSkipped: outcomes.duplicate, verifiedCases: outcomes.verified, casesRequiringReview: outcomes.needs_review, casesAdded: 0, failures: outcomes.failed + discovery.searchFailures, rejected: outcomes.rejected, seededRecords, seededRelationships, monitorsRequeued, publishedRequeued, documentsProcessed, queryOffset, queryLimit, processLimit, dryRun: Boolean(options.dryRun) };
+  await finishScanRun(scanRunId, result);
+  return result;
 }

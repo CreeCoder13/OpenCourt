@@ -13,6 +13,9 @@ import { classifyCaseStatus } from "../lib/discovery/caseStatus.ts";
 import { extractHtml } from "../lib/discovery/extract.ts";
 import { fetchWithRetry } from "../lib/discovery/http.ts";
 import { mergeWithoutDowngrade } from "../lib/discovery/merge.ts";
+import { buildSearchQueries } from "../lib/discovery/keywords.ts";
+import { officialSourceMonitors } from "../lib/discovery/officialSources.ts";
+import { findTrustedDomain } from "../lib/discovery/trustedDomains.ts";
 
 test("normalizes discovery URLs without tracking or fragments", () => {
   assert.equal(normalizeUrl("http://WWW.CanLII.org/en/ca/scc/doc/2014/2014scc44/2014scc44.html/?utm_source=x&b=2&a=1#para1"), "https://canlii.org/en/ca/scc/doc/2014/2014scc44/2014scc44.html?a=1&b=2");
@@ -24,6 +27,29 @@ test("assigns source tiers by trusted registrable domain", () => {
   assert.equal(tierForUrl("https://nctr.ca/records"), 2);
   assert.equal(tierForUrl("https://cbc.ca/news"), 3);
   assert.equal(tierForUrl("https://unknown.example/article"), 3);
+});
+
+test("uses the most specific trusted host policy", () => {
+  assert.equal(findTrustedDomain("decisions.scc-csc.ca")?.domain, "decisions.scc-csc.ca");
+  assert.equal(findTrustedDomain("www.scc-csc.ca")?.domain, "scc-csc.ca");
+});
+
+test("official monitors cover national, provincial, territorial, and CanLII sources", () => {
+  assert.ok(officialSourceMonitors.length >= 30);
+  for (const marker of ["scc-csc.ca", "fct-cf.gc.ca", "bccourts.ca", "ontariocourts.ca", "yukoncourts.ca", "nwtcourts.ca", "nunavutcourts.ca", "canlii.org/en/qc/"]) {
+    assert.ok(officialSourceMonitors.some((source) => source.url.includes(marker)), `missing ${marker}`);
+  }
+});
+
+test("broad search rotates across official court domains and wraps safely", () => {
+  const first = buildSearchQueries(0, 25);
+  const later = buildSearchQueries(500, 25);
+  const wrapped = buildSearchQueries(50_000, 25);
+  assert.equal(first.length, 25);
+  assert.equal(later.length, 25);
+  assert.equal(wrapped.length, 25);
+  assert.ok([...first, ...later, ...wrapped].some((query) => query.includes("site:")));
+  assert.notDeepEqual(first, later);
 });
 
 test("relevance requires both Indigenous and legal context", () => {

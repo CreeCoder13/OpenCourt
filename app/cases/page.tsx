@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { CasesExplorer } from "../../components/CasesExplorer";
 import { Breadcrumbs, PageShell } from "../../components/SiteChrome";
-import { cases, ongoingCases } from "../../data/cases";
+import { getPublicCases } from "../../lib/server/publicCases";
 
 export const metadata: Metadata = {
   title: "Case Database | OpenCourt",
@@ -17,6 +17,9 @@ export default async function CasesPage({
   const query = resolved.q;
   const initialQuery = typeof query === "string" ? query : "";
   const initialTab = resolved.tab === "ongoing" ? "ongoing" : "past";
+  const records = await getPublicCases();
+  const pastRecords = records.filter((record) => record.caseType !== "ongoing");
+  const ongoingRecords = records.filter((record) => record.caseType === "ongoing");
 
   return (
     <PageShell>
@@ -24,7 +27,7 @@ export default async function CasesPage({
         <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Cases" }]} />
         <div className="page-hero-grid"><div><p className="kicker">Cases</p><h1>Indigenous case law,<br />made understandable</h1></div><p>Find important Canadian decisions and track verified ongoing litigation by Nation, treaty, court, province, legal issue, citation, or topic.</p></div>
       </section>
-      <section className="database-section"><CasesExplorer pastRecords={cases} ongoingRecords={ongoingCases} initialQuery={initialQuery} initialTab={initialTab} /></section>
+      <section className="database-section"><CasesExplorer pastRecords={pastRecords} ongoingRecords={ongoingRecords} initialQuery={initialQuery} initialTab={initialTab} /></section>
     </PageShell>
   );
 }
