@@ -509,7 +509,7 @@ cases.push(
       summary: "Released with Haida Nation, the decision confirmed that the duty to consult applies to asserted rights and held that the environmental assessment process provided adequate consultation in the circumstances.",
       decision: "The provincial appeal was allowed and the project approval was restored.",
       importance: "Taku River showed how consultation can be integrated into environmental assessment and how adequacy is evaluated contextually.",
-      legalTopics: ["Duty to Consult", "Aboriginal Title", "Environment", "Resource Development", "Section 35"], communities: ["Taku River Tlingit First Nation"], parties: ["Taku River Tlingit First Nation", "British Columbia", "project proponents"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/2190/index.do", relatedCases: [{ caseSlug: "haida-nation-v-british-columbia-2004", type: "Related", note: "Released together as foundational duty-to-consult decisions." }], region: "Taku River watershed, British Columbia",
+      legalTopics: ["Duty to Consult", "Aboriginal Title", "Environmental Issues", "Resource Development", "Section 35"], communities: ["Taku River Tlingit First Nation"], parties: ["Taku River Tlingit First Nation", "British Columbia", "project proponents"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/2190/index.do", relatedCases: [{ caseSlug: "haida-nation-v-british-columbia-2004", type: "Related", note: "Released together as foundational duty-to-consult decisions." }], region: "Taku River watershed, British Columbia",
     }),
     additionalCase({
       slug: "rio-tinto-alcan-v-carrier-sekani-2010", caseName: "Rio Tinto Alcan Inc v Carrier Sekani Tribal Council", citation: "2010 SCC 43", decisionDate: "2010-10-28", provinceTerritory: "British Columbia", outcome: "Government Successful", significance: 8,
@@ -530,21 +530,21 @@ cases.push(
       summary: "The Court quashed approval for offshore seismic testing because consultation with affected Inuit communities was inadequate given the serious potential effects on treaty harvesting rights.",
       decision: "The appeal was allowed and the National Energy Board authorization was quashed.",
       importance: "Clyde River established that regulatory processes can discharge consultation duties only when they provide meaningful consultation and accommodation proportionate to the rights and impacts at stake.",
-      legalTopics: ["Inuit Rights", "Duty to Consult", "Treaty Rights", "Environment", "Resource Development"], treaties: ["Nunavut Land Claims Agreement"], communities: ["Inuit of Clyde River"], indigenousGroup: "Inuit", parties: ["Hamlet of Clyde River and Inuit organizations", "Petroleum Geo-Services Inc and others"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/16743/index.do", region: "Baffin Bay and Davis Strait, Nunavut",
+      legalTopics: ["Inuit Rights", "Duty to Consult", "Treaty Rights", "Environmental Issues", "Resource Development"], treaties: ["Nunavut Land Claims Agreement"], communities: ["Inuit of Clyde River"], indigenousGroup: "Inuit", parties: ["Hamlet of Clyde River and Inuit organizations", "Petroleum Geo-Services Inc and others"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/16743/index.do", region: "Baffin Bay and Davis Strait, Nunavut",
     }),
     additionalCase({
       slug: "chippewas-of-the-thames-v-enbridge-2017", caseName: "Chippewas of the Thames First Nation v Enbridge Pipelines Inc", citation: "2017 SCC 41", decisionDate: "2017-07-26", provinceTerritory: "Ontario", outcome: "Government Successful", significance: 8,
       summary: "The Court held that the Crown could rely on a regulatory process to satisfy consultation duties and found consultation adequate for the Line 9 pipeline modification.",
       decision: "The First Nation’s appeal was dismissed.",
       importance: "Together with Clyde River, the decision defines when an administrative tribunal’s process can fulfill the Crown’s duty to consult.",
-      legalTopics: ["Duty to Consult", "Treaty Rights", "Resource Development", "Environment"], communities: ["Chippewas of the Thames First Nation"], parties: ["Chippewas of the Thames First Nation", "Enbridge Pipelines Inc", "National Energy Board", "Canada"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/16744/index.do", region: "Southwestern Ontario",
+      legalTopics: ["Duty to Consult", "Treaty Rights", "Resource Development", "Environmental Issues"], communities: ["Chippewas of the Thames First Nation"], parties: ["Chippewas of the Thames First Nation", "Enbridge Pipelines Inc", "National Energy Board", "Canada"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/16744/index.do", region: "Southwestern Ontario",
     }),
     additionalCase({
       slug: "first-nation-of-nacho-nyak-dun-v-yukon-2017", caseName: "First Nation of Nacho Nyak Dun v Yukon", citation: "2017 SCC 58", decisionDate: "2017-12-01", provinceTerritory: "Yukon", outcome: "Nation Successful", significance: 9,
       summary: "The Court enforced the collaborative land-use planning process in Yukon modern treaties and held that Yukon could not substantially depart from the recommended plan at the final stage.",
       decision: "The appeal was allowed in part and Yukon’s approval of its plan was quashed.",
       importance: "Nacho Nyak Dun is a leading modern-treaty implementation decision emphasizing honourable conduct and fidelity to negotiated constitutional arrangements.",
-      legalTopics: ["Treaty Rights", "Treaty Interpretation", "Self-Government", "Land & Resources", "Environment"], treaties: ["Yukon First Nations Final Agreements"], communities: ["First Nation of Nacho Nyak Dun", "Tr’ondëk Hwëch’in", "Vuntut Gwitchin First Nation"], parties: ["First Nation of Nacho Nyak Dun and others", "Government of Yukon"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/16890/index.do", region: "Peel Watershed, Yukon",
+      legalTopics: ["Treaty Rights", "Treaty Interpretation", "Self-Government", "Land & Resources", "Environmental Issues"], treaties: ["Yukon First Nations Final Agreements"], communities: ["First Nation of Nacho Nyak Dun", "Tr’ondëk Hwëch’in", "Vuntut Gwitchin First Nation"], parties: ["First Nation of Nacho Nyak Dun and others", "Government of Yukon"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/16890/index.do", region: "Peel Watershed, Yukon",
     }),
     additionalCase({
       slug: "southwind-v-canada-2021", caseName: "Southwind v Canada", citation: "2021 SCC 28", decisionDate: "2021-07-16", provinceTerritory: "Ontario", outcome: "Nation Successful", significance: 9,

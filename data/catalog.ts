@@ -1,8 +1,65 @@
 import { cases } from "./cases";
-import type { Community, Topic } from "./types";
+import type { Community, Source, Topic } from "./types";
 export { treaties, treatyBySlug } from "./treaties";
 
-const verified = "2026-08-28";
+const verified = "2026-09-02";
+
+const primaryLegislation = (id: string, title: string, url: string, supports: string[]): Source => ({
+  id,
+  title,
+  publisher: "Department of Justice Canada",
+  url,
+  type: "Primary",
+  verificationStatus: "Verified",
+  supports,
+  note: "Official consolidated legal text used to verify this plain-language definition.",
+  accessedDate: verified,
+});
+
+const judgmentSource = (topicName: string, slug: string): Source => {
+  const record = cases.find((item) => item.slug === slug);
+  const source = record?.sources.find((item) => item.type === "Primary" && item.verificationStatus === "Verified");
+  if (!record || !source) throw new Error(`Missing verified primary definition source for ${topicName}`);
+  return {
+    ...source,
+    id: `definition-${slug}`,
+    title: `${record.caseName} (${record.officialCitation})`,
+    supports: [`Plain-language definition of ${topicName}`, "Controlling legal principles"],
+    note: "The definition is a plain-language synthesis. Read the official reasons for the precise legal test and its limits.",
+    accessedDate: verified,
+  };
+};
+
+const section35Source = primaryLegislation(
+  "definition-constitution-section-35",
+  "Constitution Act, 1982, section 35",
+  "https://laws-lois.justice.gc.ca/eng/ConstRpt/page-12.html",
+  ["Text of section 35", "Aboriginal and treaty rights", "First Nations, Inuit and Métis"],
+);
+
+const topicAuthorities: Record<string, Source[]> = {
+  "Aboriginal Title": [judgmentSource("Aboriginal Title", "tsilhqotin-nation-v-british-columbia-2014")],
+  "Treaty Rights": [judgmentSource("Treaty Rights", "r-v-marshall-1999"), section35Source],
+  "Duty to Consult": [judgmentSource("Duty to Consult", "haida-nation-v-british-columbia-2004")],
+  "Aboriginal Rights": [judgmentSource("Aboriginal Rights", "r-v-van-der-peet-1996"), section35Source],
+  "Indigenous Governance": [judgmentSource("Indigenous Governance", "reference-first-nations-inuit-metis-children-2024")],
+  "Membership & Citizenship": [judgmentSource("Membership & Citizenship", "dickson-v-vuntut-gwitchin-first-nation-2024")],
+  "Hunting & Fishing Rights": [judgmentSource("Hunting & Fishing Rights", "r-v-sparrow-1990")],
+  "Land & Resources": [judgmentSource("Land & Resources", "tsilhqotin-nation-v-british-columbia-2014")],
+  "Specific Claims": [primaryLegislation("definition-specific-claims-tribunal-act", "Specific Claims Tribunal Act", "https://laws-lois.justice.gc.ca/eng/acts/S-15.36/", ["Statutory basis for eligible specific claims", "Claims relating to First Nations and Crown legal obligations"])],
+  "Fiduciary Duty": [judgmentSource("Fiduciary Duty", "guerin-v-the-queen-1984")],
+  "Taxation": [primaryLegislation("definition-indian-act-section-87", "Indian Act, section 87", "https://laws-lois.justice.gc.ca/eng/acts/I-5/section-87.html", ["Statutory tax exemption", "Property situated on a reserve"])],
+  "Child & Family Services": [judgmentSource("Child & Family Services", "reference-first-nations-inuit-metis-children-2024")],
+  "Resource Development": [judgmentSource("Resource Development", "haida-nation-v-british-columbia-2004")],
+  "Environmental Issues": [judgmentSource("Environmental Issues", "clyde-river-v-petroleum-geo-services-2017")],
+  "Métis Rights": [judgmentSource("Métis Rights", "r-v-powley-2003"), section35Source],
+  "Inuit Rights": [judgmentSource("Inuit Rights", "clyde-river-v-petroleum-geo-services-2017"), section35Source],
+  "Section 35": [section35Source, judgmentSource("Section 35", "r-v-sparrow-1990")],
+  "Treaty Interpretation": [judgmentSource("Treaty Interpretation", "r-v-sioui-1990")],
+  "Honour of the Crown": [judgmentSource("Honour of the Crown", "haida-nation-v-british-columbia-2004")],
+  "Constitutional Law": [judgmentSource("Constitutional Law", "daniels-v-canada-2016"), section35Source],
+  "Elections & Governance": [judgmentSource("Elections & Governance", "dickson-v-vuntut-gwitchin-first-nation-2024")],
+};
 
 const topicDefinitions: Array<[string, string, string[]]> = [
   ["Aboriginal Title", "A collective land right recognized by Canadian law, grounded in sufficient, continuous where required, and exclusive occupation before Crown sovereignty.", ["Land & Resources", "Duty to Consult"]],
@@ -28,16 +85,22 @@ const topicDefinitions: Array<[string, string, string[]]> = [
   ["Elections & Governance", "Cases involving Indigenous election systems, governing institutions, community rules, and their relationship with Canadian constitutional and statutory law.", ["Indigenous Governance", "Membership & Citizenship"]],
 ];
 
-export const topics: Topic[] = topicDefinitions.map(([name, description, relatedTopics], index) => ({
-  id: `topic-${index + 1}`,
-  slug: name.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/-$/g, ""),
-  name,
-  description,
-  relatedCases: cases.filter((item) => item.legalTopics.includes(name)).map((item) => item.slug),
-  relatedTopics,
-  verificationLevel: "Verified",
-  lastVerified: verified,
-}));
+export const topics: Topic[] = topicDefinitions.map(([name, description, relatedTopics], index) => {
+  const definitionSources = topicAuthorities[name] ?? [];
+  const hasVerifiedPrimarySource = definitionSources.some((source) => source.type === "Primary" && source.verificationStatus === "Verified");
+  if (!hasVerifiedPrimarySource) throw new Error(`Legal definition cannot be published without a verified primary source: ${name}`);
+  return {
+    id: `topic-${index + 1}`,
+    slug: name.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/-$/g, ""),
+    name,
+    description,
+    definitionSources,
+    relatedCases: cases.filter((item) => item.legalTopics.includes(name)).map((item) => item.slug),
+    relatedTopics,
+    verificationLevel: "Verified",
+    lastVerified: verified,
+  };
+});
 
 const communitySeed: Array<[string, Community["indigenousGroup"], string, string[], string?]> = [
   ["Nisga’a Nation", "First Nations", "British Columbia", [], "https://www.nisgaanation.ca/"],

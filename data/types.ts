@@ -187,6 +187,7 @@ export interface Topic {
   slug: string;
   name: string;
   description: string;
+  definitionSources: Source[];
   relatedCases: string[];
   relatedTopics: string[];
   verificationLevel: VerificationLevel;
