@@ -6,3 +6,8 @@ export const primaryNavigation = [
   ["Legal Definitions", "/topics"],
   ["Treaties", "/treaties"],
 ] as const;
+
+export const homeSectionLinks = {
+  allCases: "/cases",
+  allDefinitions: "/topics",
+} as const;
