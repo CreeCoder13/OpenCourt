@@ -1,10 +1,10 @@
 import type { CaseRecord, Source } from "./types";
 
 const lastVerified = "2026-08-28";
-const official = (id: string, title: string, url: string): Source => ({
+const official = (id: string, title: string, url: string, publisher = "Supreme Court of Canada"): Source => ({
   id,
   title,
-  publisher: "Supreme Court of Canada",
+  publisher,
   url,
   type: "Primary",
   category: "Judgment",
@@ -61,6 +61,12 @@ type AdditionalCaseSeed = {
   officialUrl: string;
   relatedCases?: CaseRecord["relatedCases"];
   region?: string;
+  court?: string;
+  courtLevel?: string;
+  courtFileNumber?: string;
+  publisher?: string;
+  judges?: string[];
+  verifiedDate?: string;
 };
 
 const additionalCase = (seed: AdditionalCaseSeed): CaseRecord => ({
@@ -69,7 +75,10 @@ const additionalCase = (seed: AdditionalCaseSeed): CaseRecord => ({
   slug: seed.slug,
   caseName: seed.caseName,
   officialCitation: seed.citation,
-  neutralCitation: /^\d{4} SCC \d+$/.test(seed.citation) ? seed.citation : undefined,
+  neutralCitation: /^\d{4} [A-Z][A-Z0-9.-]* \d+$/.test(seed.citation) ? seed.citation : undefined,
+  court: seed.court ?? shared.court,
+  courtLevel: seed.courtLevel ?? shared.courtLevel,
+  courtFileNumber: seed.courtFileNumber,
   provinceTerritory: seed.provinceTerritory,
   decisionDate: seed.decisionDate,
   outcome: seed.outcome,
@@ -89,10 +98,14 @@ const additionalCase = (seed: AdditionalCaseSeed): CaseRecord => ({
   indigenousCommunities: seed.communities,
   indigenousGroup: seed.indigenousGroup ?? "First Nations",
   parties: seed.parties,
-  sources: [official(`src-${seed.slug}-scc`, seed.caseName, seed.officialUrl)],
+  sources: [official(`src-${seed.slug}-official`, seed.caseName, seed.officialUrl, seed.publisher)],
   relatedCases: seed.relatedCases ?? [],
-  timelineEvents: [{ date: seed.decisionDate, court: "Supreme Court of Canada", citation: seed.citation, outcome: seed.decision, sourceUrl: seed.officialUrl }],
+  timelineEvents: [{ date: seed.decisionDate, court: seed.court ?? shared.court, citation: seed.citation, outcome: seed.decision, sourceUrl: seed.officialUrl }],
   approximateRegion: seed.region ?? seed.provinceTerritory,
+  judges: seed.judges ?? shared.judges,
+  lastVerified: seed.verifiedDate ?? shared.lastVerified,
+  createdAt: seed.verifiedDate ?? shared.createdAt,
+  updatedAt: seed.verifiedDate ?? shared.updatedAt,
 });
 
 export const cases: CaseRecord[] = [
@@ -587,6 +600,36 @@ cases.push(
       decision: "The Court upheld declaratory relief requiring honourable negotiation, while addressing the limits of contractual damages.",
       importance: "The decision extends the practical force of the honour of the Crown to the negotiation and performance of agreements concerning essential Indigenous government services.",
       legalTopics: ["Honour of the Crown", "Indigenous Governance", "Self-Government", "Treaty Rights"], communities: ["Pekuakamiulnuatsh First Nation"], parties: ["Attorney General of Quebec", "Pekuakamiulnuatsh Takuhikan"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/20755/index.do", region: "Mashteuiatsh, Quebec",
+    }),
+    additionalCase({
+      slug: "saskatchewan-environment-v-metis-nation-saskatchewan-2025", caseName: "Saskatchewan (Environment) v Métis Nation – Saskatchewan", citation: "2025 SCC 4", decisionDate: "2025-02-28", provinceTerritory: "Saskatchewan", outcome: "Nation Successful", significance: 9,
+      summary: "The Court held that Métis Nation–Saskatchewan could continue a judicial-review challenge over uranium exploration permits. Its asserted title and commercial harvesting rights did not make the proceeding an abuse of process merely because related claims existed in other actions.",
+      decision: "Saskatchewan’s appeal was dismissed. The challenged parts of the Métis Nation–Saskatchewan application remained in place, while the merits of the consultation claim were left for the Saskatchewan court to decide.",
+      importance: "The judgment confirms that procedure should facilitate the just resolution of Aboriginal claims and distinguishes a consultation challenge from litigation seeking final proof of the underlying right or title.",
+      legalTopics: ["Duty to Consult", "Métis Rights", "Aboriginal Title", "Hunting & Fishing Rights", "Section 35"], communities: ["Métis Nation – Saskatchewan"], indigenousGroup: "Métis", parties: ["Government of Saskatchewan – Minister of Environment", "Métis Nation – Saskatchewan", "Métis Nation – Saskatchewan Secretariat Inc."], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/20869/index.do", courtFileNumber: "40740", judges: ["Rowe J. for a unanimous Court"], verifiedDate: "2026-09-02", region: "Northern Saskatchewan",
+      relatedCases: [{ caseSlug: "haida-nation-v-british-columbia-2004", type: "Applied", note: "Applied the duty-to-consult framework while distinguishing proof of the underlying claim." }],
+    }),
+    additionalCase({
+      slug: "r-v-jw-2025", caseName: "R v J.W.", citation: "2025 SCC 16", decisionDate: "2025-05-23", provinceTerritory: "Ontario", outcome: "Mixed Decision", significance: 7,
+      summary: "The Court clarified when sentencing judges may consider access to correctional treatment and when an accused’s conduct can justify denying enhanced credit for pre-sentence custody. J.W. is an Attawapiskat First Nation member whose mental illness and cognitive disabilities affected the proceedings.",
+      decision: "The appeal was allowed in part. The nine-year sentence stood, but J.W. received an additional 304 days of pre-sentence custody credit because his delay-related conduct was not intentional interference with the justice system.",
+      importance: "The decision refines proportional sentencing and pre-sentence credit for vulnerable accused, including how courts assess conduct affected by mental illness and cognitive disability alongside Indigenous background.",
+      legalTopics: ["Criminal Law", "Indigenous Sentencing", "Human Rights"], communities: ["Attawapiskat First Nation"], parties: ["J.W.", "His Majesty the King"], officialUrl: "https://decisions.scc-csc.ca/scc-csc/scc-csc/en/item/21061/index.do", courtFileNumber: "40956", judges: ["Rowe J. for a unanimous Court"], verifiedDate: "2026-09-02", region: "Northern Ontario",
+    }),
+    additionalCase({
+      slug: "day-star-first-nation-v-canada-2025", caseName: "Day Star First Nation et al v His Majesty the King in Right of Canada", citation: "2025 SCTC 5", decisionDate: "2025-07-25", provinceTerritory: "Saskatchewan", outcome: "Nation Successful", significance: 8,
+      summary: "After Canada admitted that an Indian Agent’s mismanagement breached fiduciary duties, the Tribunal valued historic losses suffered by four Treaty 4 First Nations and brought those losses forward using compounded Band Trust Account rates.",
+      decision: "The Tribunal awarded approximately $64.1 million in total: $7.62 million to Day Star, $27.26 million to Fishing Lake, $9.13 million to George Gordon, and $20.14 million to Muskowekwan First Nation.",
+      importance: "The decision applies equitable compensation to century-old misuse of First Nations trust funds, treats qualifying individual losses as compensable in context, and emphasizes oral history and the Crown’s record-keeping responsibility.",
+      legalTopics: ["Specific Claims", "Fiduciary Duty", "Indian Act", "Treaty Rights"], treaties: ["Treaty 4"], communities: ["Day Star First Nation", "Fishing Lake First Nation", "George Gordon First Nation", "Muskowekwan First Nation"], parties: ["Day Star First Nation and three other claimant First Nations", "His Majesty the King in Right of Canada", "Kawacatoose First Nation as intervenor"], officialUrl: "https://decisions.sct-trp.ca/sct/rod/en/item/520924/index.do", court: "Specific Claims Tribunal Canada", courtLevel: "Federal Tribunal", courtFileNumber: "SCT-5009-19", publisher: "Specific Claims Tribunal Canada", judges: ["The Honourable Todd Ducharme"], verifiedDate: "2026-09-02", region: "Treaty 4 territory, Saskatchewan",
+    }),
+    additionalCase({
+      slug: "cowichan-tribes-v-canada-2025", caseName: "Cowichan Tribes v Canada (Attorney General)", citation: "2025 BCSC 1490", decisionDate: "2025-08-07", provinceTerritory: "British Columbia", outcome: "Nation Successful", significance: 10,
+      summary: "After an exceptionally long trial, the Court found that the historic Quw’utsun Nation had established Aboriginal title to part of its traditional village lands at Tl’uqtinus in present-day Richmond and an Aboriginal right to fish for food in the south arm of the Fraser River.",
+      decision: "The Court granted Aboriginal-title and fishing-right declarations over portions of the claimed area and ordered Crown parties to negotiate reconciliation of Crown-granted interests with the established title. The judgment did not itself cancel private owners’ registered titles.",
+      importance: "This is a major post-Tsilhqot’in title judgment addressing historic village occupation, submerged and fee-simple lands, unjustified Crown grants, and the practical reconciliation of Aboriginal title with later property interests.",
+      legalTopics: ["Aboriginal Title", "Hunting & Fishing Rights", "Land & Resources", "Section 35", "Fiduciary Duty"], communities: ["Cowichan Tribes", "Stz’uminus First Nation", "Penelakut Tribe", "Halalt First Nation", "Lyackson First Nation"], parties: ["Cowichan Tribes and related Quw’utsun Nation plaintiffs", "Canada", "British Columbia", "City of Richmond and other defendants"], officialUrl: "https://www.bccourts.ca/jdb-txt/sc/25/14/2025BCSC1490.htm", court: "Supreme Court of British Columbia", courtLevel: "Superior Court", publisher: "Courts of British Columbia", judges: ["Young J."], verifiedDate: "2026-09-02", region: "Tl’uqtinus, Richmond, British Columbia",
+      relatedCases: [{ caseSlug: "tsilhqotin-nation-v-british-columbia-2014", type: "Applied", note: "Applied the Supreme Court’s framework for proving Aboriginal title." }],
     }),
   ],
 );
