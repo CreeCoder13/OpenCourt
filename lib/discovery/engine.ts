@@ -12,8 +12,9 @@ import { assessRelevance } from "./relevance";
 import { discoverySeedUrls, trustedMonitorUrls } from "./seeds";
 import { searchWeb } from "./search";
 import { findTrustedDomain, tierForUrl } from "./trustedDomains";
+import { classifyEvidenceSource } from "./sourcePolicy";
 import { determineVerification } from "./verification";
-import type { AiClassification, EvidenceSource } from "./types";
+import type { AiClassification, EvidenceSource, EvidenceSourceType } from "./types";
 
 export const scanSchedule = {
   incremental: "Every 6 hours: new judgments, appeal decisions, legislation and high-priority sources",
@@ -59,7 +60,7 @@ async function enqueueSeedsAndSearch(queryOffset: number, queryLimit: number, fi
 
 const includesSignal = (ai: AiClassification, pattern: RegExp) => ai.impactSignals.some((signal) => pattern.test(signal.toLowerCase()));
 
-function buildExtracted(ai: AiClassification, sourceUrl: string) {
+function buildExtracted(ai: AiClassification, sourceUrl: string, sourceType: EvidenceSourceType) {
   const title = ai.proposedTitle ?? "Untitled legal record";
   const slug = title.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const isCanLII = new URL(sourceUrl).hostname.replace(/^www\./, "").endsWith("canlii.org");
@@ -71,7 +72,7 @@ function buildExtracted(ai: AiClassification, sourceUrl: string) {
     IndigenousNation: ai.nations, IndigenousPeople: [], treaty: ai.treatiesReferenced, provinceTerritory: [], legalIssues: ai.significanceSignals,
     categories: ai.categories, constitutionalSections: ai.constitutionalSections, legislationReferenced: ai.legislationReferenced, casesCited: ai.casesCited,
     casesCiting: [], plainLanguageSummary: ai.summary ?? "Summary pending editorial review.", currentLegalStatus: status.status, caseType: status.caseType, proceduralStage: ai.proceduralStage ?? undefined, latestDevelopment: ai.latestDevelopment ?? undefined, latestDevelopmentDate: ai.latestDevelopmentDate ?? undefined, upcomingHearingDate: ai.upcomingHearingDate ?? undefined,
-    officialDecisionUrl: isCanLII ? undefined : sourceUrl, canLIIUrl: isCanLII ? sourceUrl : undefined,
+    officialDecisionUrl: sourceType === "OFFICIAL_JUDGMENT" ? sourceUrl : undefined, canLIIUrl: isCanLII ? sourceUrl : undefined,
     additionalSources: [], sourceTier: tierForUrl(sourceUrl), verificationSources: [], dateDiscovered: new Date().toISOString(),
     };
   }
@@ -136,10 +137,11 @@ async function processOne(): Promise<ProcessOutcome> {
       return "rejected";
     }
 
-    const evidence: EvidenceSource = { url: fetched.normalizedUrl, title: ai.proposedTitle ?? fetched.title, publisher: trusted?.sourceName, tier: candidate.sourceTier, sourceType: ai.recordType === "CASE" ? "JUDGMENT" : ai.recordType === "LAW" ? "LEGISLATION" : ai.recordType === "TREATY" ? "TREATY" : candidate.sourceTier === 1 ? "GOVERNMENT" : "CONTEXT", retrievedAt: new Date().toISOString(), contentHash: fetched.contentHash, supports: ["Document text", ...ai.citations], authoritative: candidate.sourceTier === 1 };
-    const verification = determineVerification({ sources: [evidence], title: ai.proposedTitle ?? undefined, court: ai.court ?? undefined, decisionDate: ai.decisionDate ?? undefined, citation: ai.neutralCitation ?? ai.legislationCitation ?? undefined });
+    const policy = classifyEvidenceSource(fetched.normalizedUrl, ai, trusted);
+    const evidence: EvidenceSource = { url: fetched.normalizedUrl, title: ai.proposedTitle ?? fetched.title, publisher: trusted?.sourceName, tier: candidate.sourceTier, ...policy, retrievedAt: new Date().toISOString(), contentHash: fetched.contentHash, supports: ["Document text", ...ai.citations] };
+    const verification = determineVerification({ sources: [evidence], title: ai.proposedTitle ?? undefined, court: ai.court ?? undefined, decisionDate: ai.decisionDate ?? undefined, citation: ai.neutralCitation ?? undefined, officialIdentifier: ai.courtFileNumber ?? undefined });
     const impact = assessImpact({ court: ai.court ?? undefined, createdLegalTest: includesSignal(ai, /new legal test|framework/), changedSection35: includesSignal(ai, /section 35/), recognizedTitle: includesSignal(ai, /aboriginal title/), recognizedTreatyRight: includesSignal(ai, /treaty right/), consultationObligation: includesSignal(ai, /consult/), changedIndigenousJurisdiction: includesSignal(ai, /jurisdiction/), struckLegislation: includesSignal(ai, /invalid|strike|inoperative/), changedCrownObligations: includesSignal(ai, /crown obligation|honour of the crown|fiduciary/), nationalEffect: includesSignal(ai, /national|canada-wide/), historicallySignificant: ai.recordType === "HISTORICAL_DEVELOPMENT", causedLegislativeChange: includesSignal(ai, /legislative change/) });
-    const extracted = buildExtracted(ai, fetched.normalizedUrl);
+    const extracted = buildExtracted(ai, fetched.normalizedUrl, evidence.sourceType);
     const duplicates = ai.recordType === "CASE" ? findDuplicate({ id: candidate.id, caseName: ai.proposedTitle ?? undefined, neutralCitation: ai.neutralCitation ?? undefined, courtFileNumber: ai.courtFileNumber ?? undefined, decisionDate: ai.decisionDate ?? undefined, court: ai.court ?? undefined, officialDecisionUrl: fetched.normalizedUrl }, await listDuplicateCandidates()) : { reasons: [], confidence: 0 };
     await updateDocument(candidate.id, {
       title: ai.proposedTitle ?? fetched.title ?? candidate.title, mimeType: fetched.mimeType, contentHash: fetched.contentHash,

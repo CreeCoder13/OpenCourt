@@ -1,7 +1,7 @@
 export interface OfficialSourceMonitor {
   name: string;
   url: string;
-  coverage: "judgments" | "active-cases" | "jurisdiction-index";
+  coverage: "judgments" | "active-cases" | "jurisdiction-index" | "tribunal-decisions" | "regulatory-registry";
 }
 
 // Public entry points only. Individual requests remain subject to robots.txt,
@@ -11,6 +11,9 @@ export const officialSourceMonitors: OfficialSourceMonitor[] = [
   { name: "Supreme Court of Canada case information", url: "https://www.scc-csc.ca/cases-dossiers/search-recherche/", coverage: "active-cases" },
   { name: "Supreme Court of Canada decisions", url: "https://decisions.scc-csc.ca/scc-csc/en/nav.do", coverage: "judgments" },
   { name: "Federal Court and Federal Court of Appeal decisions", url: "https://decisions.fct-cf.gc.ca/fc-cf/en/nav.do", coverage: "judgments" },
+  { name: "Federal Court court files", url: "https://www-u.fct-cf.gc.ca/en/court-files-and-decisions/court-files", coverage: "active-cases" },
+  { name: "Federal Court hearing lists", url: "https://www-u.fct-cf.gc.ca/en/court-files-and-decisions/hearing-lists", coverage: "active-cases" },
+  { name: "Tax Court of Canada decisions", url: "https://decision.tcc-cci.gc.ca/tcc-cci/en/nav.do", coverage: "judgments" },
   { name: "British Columbia Supreme Court recent judgments", url: "https://www.bccourts.ca/supreme_court/recent_Judgments.aspx", coverage: "judgments" },
   { name: "British Columbia Court of Appeal recent judgments", url: "https://www.bccourts.ca/Court_of_Appeal/recent_Judgments.aspx", coverage: "judgments" },
   { name: "Ontario Superior Court decisions", url: "https://www.ontariocourts.ca/scj/about-the-court-2/decisions-of-the-court/", coverage: "judgments" },
@@ -25,6 +28,22 @@ export const officialSourceMonitors: OfficialSourceMonitor[] = [
   { name: "Northwest Territories courts", url: "https://www.nwtcourts.ca/en/", coverage: "jurisdiction-index" },
   { name: "Nunavut Court of Justice decisions", url: "https://www.nunavutcourts.ca/nunavut-court-justice/decisions", coverage: "judgments" },
   { name: "Nunavut Court of Appeal decisions", url: "https://www.nunavutcourts.ca/nunavut-court-appeal/decisions", coverage: "judgments" },
+  { name: "Specific Claims Tribunal decisions", url: "https://decisions.sct-trp.ca/sct/en/nav.do", coverage: "tribunal-decisions" },
+  { name: "Specific Claims Tribunal filed claims", url: "https://sct-claims-revendications-trp.sct-trp.ca/curre/index_e.asp", coverage: "active-cases" },
+  { name: "Specific Claims Tribunal upcoming hearings", url: "https://sct-claims-revendications-trp.sct-trp.ca/HearingAudience/index_e.asp", coverage: "active-cases" },
+  { name: "Canadian Human Rights Tribunal decisions", url: "https://www.chrt-tcdp.gc.ca/en/human-rights/search-human-rights-decisions", coverage: "tribunal-decisions" },
+  { name: "Canadian Human Rights Tribunal public hearings", url: "https://www.chrt-tcdp.gc.ca/en/human-rights/human-rights-public-hearings", coverage: "active-cases" },
+  { name: "Canadian Energy Regulator Indigenous and treaty-rights hearings", url: "https://www.rec-cer.gc.ca/en/consultation-engagement/crown-consultation/indigenous-treaty-rights-hearings.html", coverage: "regulatory-registry" },
+  { name: "Ontario Land Tribunal decisions", url: "https://ist.olt.gov.on.ca/decisions/", coverage: "tribunal-decisions" },
+  { name: "Alberta Energy Regulator decisions", url: "https://www.aer.ca/regulating-development/project-application/decisions", coverage: "regulatory-registry" },
+  { name: "BC Environmental Appeal Board decisions", url: "https://www.bceab.ca/decisions/", coverage: "tribunal-decisions" },
+  { name: "Quebec BAPE reports", url: "https://www.bape.gouv.qc.ca/fr/salle-de-presse/rapports/", coverage: "regulatory-registry" },
+  { name: "Nunavut Impact Review Board registry", url: "https://www.nirb.ca/", coverage: "regulatory-registry" },
+  { name: "Nunavut Planning Commission registry", url: "https://lupit.nunavut.ca/portal/registry/registry.aspx?appid=148975", coverage: "regulatory-registry" },
+  { name: "Mackenzie Valley Review Board registry", url: "https://new.reviewboard.ca/en/registry/projects/documents", coverage: "regulatory-registry" },
+  { name: "Mackenzie Valley Land and Water Board registry", url: "https://mvlwb.com/registry/documents", coverage: "regulatory-registry" },
+  { name: "Yukon Environmental and Socio-economic Assessment Board registry", url: "https://yesab.ca/", coverage: "regulatory-registry" },
+  { name: "Inuvialuit Environmental Impact Screening Committee registry", url: "https://screeningcommittee.ca/eisc/", coverage: "regulatory-registry" },
   { name: "CanLII federal databases", url: "https://www.canlii.org/en/ca/", coverage: "jurisdiction-index" },
   { name: "CanLII British Columbia databases", url: "https://www.canlii.org/en/bc/", coverage: "jurisdiction-index" },
   { name: "CanLII Alberta databases", url: "https://www.canlii.org/en/ab/", coverage: "jurisdiction-index" },
@@ -46,4 +65,6 @@ export const officialCaseSearchDomains = [
   "bccourts.ca", "ontariocourts.ca", "albertacourts.ca", "sasklawcourts.ca",
   "manitobacourts.mb.ca", "courtsnb-coursnb.ca", "courts.ns.ca", "courts.pe.ca",
   "court.nl.ca", "yukoncourts.ca", "nwtcourts.ca", "nunavutcourts.ca",
+  "sct-trp.ca", "chrt-tcdp.gc.ca", "rec-cer.gc.ca", "olt.gov.on.ca", "aer.ca", "bceab.ca",
+  "bape.gouv.qc.ca", "nirb.ca", "lupit.nunavut.ca", "reviewboard.ca", "mvlwb.com", "yesab.ca", "screeningcommittee.ca",
 ] as const;

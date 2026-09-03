@@ -16,6 +16,10 @@ import { mergeWithoutDowngrade } from "../lib/discovery/merge.ts";
 import { buildSearchQueries } from "../lib/discovery/keywords.ts";
 import { officialSourceMonitors } from "../lib/discovery/officialSources.ts";
 import { findTrustedDomain } from "../lib/discovery/trustedDomains.ts";
+import { classifyEvidenceSource } from "../lib/discovery/sourcePolicy.ts";
+import type { AiClassification } from "../lib/discovery/types.ts";
+
+const aiCase: AiClassification = { relevance: "RELEVANT", confidence: 0.9, recordType: "CASE", categories: ["Section 35"], proposedTitle: "Nation v Canada", summary: "Decision summary", significanceSignals: [], nations: [], citations: ["2026 FC 1"], verificationNeeded: [], court: "Federal Court", courtFileNumber: "T-1-26", decisionDate: "2026-01-01", neutralCitation: "2026 FC 1", legislationCitation: null, parties: [], constitutionalSections: [], legislationReferenced: [], casesCited: [], treatiesReferenced: [], impactSignals: [], proceduralStage: "Decision released", latestDevelopment: "Decision released", latestDevelopmentDate: "2026-01-01", upcomingHearingDate: null };
 
 test("normalizes discovery URLs without tracking or fragments", () => {
   assert.equal(normalizeUrl("http://WWW.CanLII.org/en/ca/scc/doc/2014/2014scc44/2014scc44.html/?utm_source=x&b=2&a=1#para1"), "https://canlii.org/en/ca/scc/doc/2014/2014scc44/2014scc44.html?a=1&b=2");
@@ -34,9 +38,9 @@ test("uses the most specific trusted host policy", () => {
   assert.equal(findTrustedDomain("www.scc-csc.ca")?.domain, "scc-csc.ca");
 });
 
-test("official monitors cover national, provincial, territorial, and CanLII sources", () => {
-  assert.ok(officialSourceMonitors.length >= 30);
-  for (const marker of ["scc-csc.ca", "fct-cf.gc.ca", "bccourts.ca", "ontariocourts.ca", "yukoncourts.ca", "nwtcourts.ca", "nunavutcourts.ca", "canlii.org/en/qc/"]) {
+test("official monitors cover courts, tribunals, regulatory boards, territories, and CanLII", () => {
+  assert.ok(officialSourceMonitors.length >= 45);
+  for (const marker of ["scc-csc.ca", "fct-cf.gc.ca", "bccourts.ca", "ontariocourts.ca", "yukoncourts.ca", "nwtcourts.ca", "nunavutcourts.ca", "sct-trp.ca", "chrt-tcdp.gc.ca", "rec-cer.gc.ca", "nirb.ca", "reviewboard.ca", "yesab.ca", "canlii.org/en/qc/"]) {
     assert.ok(officialSourceMonitors.some((source) => source.url.includes(marker)), `missing ${marker}`);
   }
 });
@@ -105,6 +109,26 @@ test("verification requires authoritative evidence and core identifiers", () => 
 test("missing core information cannot be marked verified", () => {
   const source = { url: "https://decisions.scc-csc.ca/example", tier: 1 as const, sourceType: "JUDGMENT" as const, supports: [], authoritative: true };
   assert.equal(determineVerification({ sources: [source], title: "Unconfirmed matter" }).level, "PARTIALLY_VERIFIED");
+});
+
+test("source policy applies the seven-rank evidence hierarchy", () => {
+  const judgment = classifyEvidenceSource("https://decisions.fct-cf.gc.ca/fc-cf/decisions/en/item/1/index.do", aiCase, findTrustedDomain("decisions.fct-cf.gc.ca"));
+  const docket = classifyEvidenceSource("https://www-u.fct-cf.gc.ca/en/court-files-and-decisions/court-files", aiCase, findTrustedDomain("www-u.fct-cf.gc.ca"));
+  const canlii = classifyEvidenceSource("https://www.canlii.org/en/ca/fct/doc/2026/2026fc1/2026fc1.html", aiCase, findTrustedDomain("www.canlii.org"));
+  const regulator = classifyEvidenceSource("https://www.aer.ca/regulating-development/project-application/decisions", aiCase, findTrustedDomain("www.aer.ca"));
+  assert.equal(judgment.evidenceRank, 1);
+  assert.equal(docket.evidenceRank, 2);
+  assert.equal(canlii.evidenceRank, 3);
+  assert.equal(regulator.evidenceRank, 4);
+  assert.ok(docket.verifies.includes("proceduralStage"));
+  assert.ok(!docket.verifies.includes("decision"));
+});
+
+test("government, Indigenous organization, regulatory, and news sources cannot independently verify a case", () => {
+  for (const evidenceRank of [4, 5, 6, 7] as const) {
+    const source = { url: `https://source${evidenceRank}.example/item`, tier: 1 as const, evidenceRank, sourceType: "OFFICIAL_REGULATORY_RECORD" as const, verifies: ["context" as const], supports: ["Document text"], authoritative: evidenceRank === 4 };
+    assert.equal(determineVerification({ sources: [source], title: "Nation v Canada", court: "Federal Court", decisionDate: "2026-01-01", citation: "2026 FC 1" }).level, "PARTIALLY_VERIFIED");
+  }
 });
 
 test("malformed HTML is sanitized and does not execute or retain script content", () => {

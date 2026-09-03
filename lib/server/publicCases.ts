@@ -20,7 +20,7 @@ function sources(value: unknown, accessedDate: string): Source[] {
       publisher: source.publisher || new URL(source.url).hostname,
       url: source.url,
       type: source.authoritative ? "Primary" as const : "Secondary" as const,
-      category: source.sourceType === "JUDGMENT" ? "Judgment" as const : source.sourceType === "CONTEXT" ? "Background Explainer" as const : "Case Information" as const,
+      category: source.sourceType === "JUDGMENT" || source.sourceType === "OFFICIAL_JUDGMENT" || source.sourceType === "CANLII_JUDGMENT" ? "Judgment" as const : source.sourceType === "CONTEXT" || source.sourceType === "COMMENTARY_NEWS" ? "Background Explainer" as const : "Case Information" as const,
       verificationStatus: source.authoritative ? "Verified" as const : "Secondary Source" as const,
       supports: source.supports || [],
       accessedDate: source.retrievedAt?.slice(0, 10) || accessedDate,

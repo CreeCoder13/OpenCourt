@@ -7,6 +7,17 @@ export const VERIFICATION_LEVELS = [
 
 export type VerificationLevel = (typeof VERIFICATION_LEVELS)[number];
 export type SourceTier = 1 | 2 | 3;
+export type EvidenceRank = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type EvidenceField =
+  | "caseName" | "court" | "neutralCitation" | "decisionDate" | "decision"
+  | "courtFileNumber" | "proceduralStage" | "caseStatus" | "upcomingHearingDate"
+  | "legislation" | "regulatoryRecord" | "context";
+export type EvidenceSourceType =
+  | "OFFICIAL_JUDGMENT" | "OFFICIAL_DOCKET" | "CANLII_JUDGMENT"
+  | "OFFICIAL_LEGISLATION" | "OFFICIAL_REGULATORY_RECORD"
+  | "INDIGENOUS_OFFICIAL" | "GOVERNMENT_ANNOUNCEMENT" | "COMMENTARY_NEWS"
+  // Legacy values remain readable for already-published JSON records.
+  | "JUDGMENT" | "LEGISLATION" | "TREATY" | "GOVERNMENT" | "INSTITUTIONAL" | "CONTEXT";
 export type RelevanceLabel = "RELEVANT" | "POSSIBLY_RELEVANT" | "NOT_RELEVANT";
 export type RecordType = "CASE" | "LAW" | "TREATY" | "POLICY" | "HISTORICAL_DEVELOPMENT";
 export type ReviewStatus = "DISCOVERED" | "PROCESSING" | "MONITOR" | "REVIEW" | "PUBLISHED" | "REJECTED" | "FAILED";
@@ -28,7 +39,9 @@ export interface EvidenceSource {
   title?: string;
   publisher?: string;
   tier: SourceTier;
-  sourceType: "JUDGMENT" | "LEGISLATION" | "TREATY" | "GOVERNMENT" | "INSTITUTIONAL" | "CONTEXT";
+  sourceType: EvidenceSourceType;
+  evidenceRank?: EvidenceRank;
+  verifies?: EvidenceField[];
   retrievedAt?: string;
   contentHash?: string;
   supports: string[];
@@ -186,6 +199,8 @@ export interface TrustedDomain {
   domain: string;
   tier: SourceTier;
   sourceName: string;
+  evidenceRank?: EvidenceRank;
+  sourceType?: EvidenceSourceType;
   allowed: boolean;
   crawlMethod: "API" | "RSS" | "SITEMAP" | "SEARCH" | "TARGETED" | "MANUAL";
   rateLimit: { requests: number; perSeconds: number };
