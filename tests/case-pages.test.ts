@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 
 import { allCases } from "../data/cases.ts";
-import { casePath } from "../data/navigation.ts";
+import { casePath, caseSummaryPath } from "../data/navigation.ts";
 
 const requiredTextFields = [
   "slug",
@@ -28,7 +29,16 @@ test("every published case has a unique, dedicated route", () => {
   for (const item of allCases) {
     assert.match(item.slug, /^[a-z0-9]+(?:-[a-z0-9]+)*$/, `${item.caseName} must use a URL-safe slug`);
     assert.equal(casePath(item.slug), `/cases/${item.slug}`);
+    assert.equal(caseSummaryPath(item.slug), `/cases/${item.slug}#analysis`);
   }
+});
+
+test("View Case uses native navigation to the existing detailed-summary anchor", () => {
+  const card = readFileSync(new URL("../components/CaseCard.tsx", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../app/cases/[slug]/page.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(card, /from ["']next\/link["']/);
+  assert.match(card, /<a\b[^>]*href=\{caseSummaryPath\(item\.slug\)\}/);
+  assert.match(page, /id="analysis"/);
 });
 
 test("every published case can render the complete detail-page content", () => {

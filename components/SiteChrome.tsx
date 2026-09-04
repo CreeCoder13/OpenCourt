@@ -40,7 +40,7 @@ export function PageShell({ children }: { children: React.ReactNode }) {
 }
 
 export function Breadcrumbs({ items }: { items: Array<{ label: string; href?: string }> }) {
-  return <nav className="breadcrumbs" aria-label="Breadcrumb">{items.map((item, index) => <span key={`${item.label}-${index}`}>{index > 0 && <b>/</b>}{item.href ? <Link href={item.href}>{item.label}</Link> : item.label}</span>)}</nav>;
+  return <nav className="breadcrumbs" aria-label="Breadcrumb">{items.map((item, index) => <span key={`${item.label}-${index}`}>{index > 0 && <b>/</b>}{item.href ? <DocumentNavigationLink href={item.href}>{item.label}</DocumentNavigationLink> : item.label}</span>)}</nav>;
 }
 
 export function VerificationBadge({ level }: { level: "Verified" | "Secondary Source" | "Needs Verification" }) {
