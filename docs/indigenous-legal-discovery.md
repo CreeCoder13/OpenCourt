@@ -1,92 +1,78 @@
-# OpenCourt Indigenous legal discovery
+# OpenCourt nationwide Indigenous-case discovery
 
-This subsystem discovers Canadian Indigenous legal material without attempting an indiscriminate web crawl. It prioritizes an explicit source registry, rotates targeted search queries in small batches, respects site rules, and blocks publication until authoritative evidence and a human review are both present.
+This is the existing OpenCourt ingestion and pending-case system, expanded across Canada. It discovers possible cases, retains field-level evidence, deduplicates against pending and published records, and stages review items. It never publishes a discovered result. Publication remains a separate authenticated editor action and is blocked without primary verification.
 
-## Pipeline
+## Source and court coverage
 
-`SEARCH → DISCOVER URL → ROBOTS CHECK → FETCH/CACHE → EXTRACT → DETERMINISTIC FILTER → AI CLASSIFY → DEDUPLICATE → VERIFY → SCORE → REVIEW → PUBLISH`
+`lib/discovery/jurisdictions.ts` is the court roster: Supreme Court of Canada, Federal Court, Federal Court of Appeal, Tax Court, and the appellate, superior and provincial/territorial courts of every province and territory. Nunavut is correctly represented by its unified Court of Justice plus its Court of Appeal. `lib/discovery/nationwideSources.ts` adds the Specific Claims Tribunal, Canadian Human Rights Tribunal, selected human-rights, environmental, energy and land-use bodies, and context-only government, Indigenous-organization and legal-reporting sources.
 
-- Tier 1 sources are courts, official legal databases, legislatures, government legal publications and an issuing Indigenous government where it is authoritative for its own law or agreement.
-- Tier 2 sources are strong institutional, academic, archival and Indigenous-organization sources.
-- Tier 3 sources are discovery and context sources. A Tier 3 statement cannot by itself verify a judgment, law or treaty.
-- Unknown search-result domains default to Tier 3 and remain subject to robots.txt, size limits, relevance filtering and review.
-- The crawler identifies itself, uses per-domain delays, follows robots.txt, never handles authentication or CAPTCHA challenges, and sends `If-None-Match`/`If-Modified-Since` when cached validators exist.
-- Source bytes are content-addressed in R2. D1 stores fetch metadata, extracted text, candidates, evidence, usage and publication state.
+The roster is discovery configuration, not a claim of complete holdings or access. Each report separates courts configured, pages attempted/read and inaccessible sources by jurisdiction. Court links were cross-checked against the Department of Justice Canada court directory; source-specific paths still require periodic editorial review.
 
-## Verification and publication
+CanLII is API/manual-only in this implementation. Its public HTML is not crawled: CanLII's current terms direct automated or large-scale retrieval to original sources or authorized channels, and its FAQ says external robots may not index decisions. A future authorized adapter can be connected without weakening that rule. Terms gates, CAPTCHAs, authentication, robots restrictions, publication bans, sealed/confidential warnings and non-index directives are stopped and reported, not bypassed.
 
-The levels are `VERIFIED_PRIMARY`, `VERIFIED_MULTIPLE`, `PARTIALLY_VERIFIED` and `UNVERIFIED`. A primary verification requires a Tier 1 authoritative document plus enough core identifiers, such as the title, court, date and citation. Multiple verification adds an independent corroborating source.
+## Discovery pipeline and evidence
 
-The server rejects publish requests for `PARTIALLY_VERIFIED` and `UNVERIFIED` records. The editor must still open the original source and review the proposed summary, identity fields, legal status, relationships and duplicate warnings. AI output never changes verification status by itself.
+`ROSTER + PERMITTED SEARCH → ROBOTS/POLICY CHECK → BOUNDED FETCH → RELEVANCE → CASE-SPECIFIC PARSE → FIELD EVIDENCE → STATUS CHECK → DEDUPLICATE → PENDING REVIEW`
 
-## Discovery and scheduling
+- English and French terms cover Aboriginal/Indigenous title and rights, treaty rights, section/article 35, consultation, Métis and Inuit rights, hunting/fishing, reserve lands, Indian Act litigation, self-government, specific claims, taxation, child/family services, Jordan's Principle and UNDRIP/DNUDPA. Community names include variants and selected historical terminology only as search vocabulary.
+- A name appearing in text never establishes a person's Indigenous identity or membership. Nation/community fields are left for editorial verification.
+- A field carries its source URL, content hash, retrieval date, value, short source quote and locator. A source list/index cannot become a case merely because it mentions a citation.
+- Judgment, docket, context and regulatory/tribunal sources remain distinct. Government announcements, Indigenous-government/organization pages and reporting can discover a lead but cannot independently verify a court case.
+- Decision type (`FINAL_JUDGMENT`, `INTERLOCUTORY`, `DECISION_UNSPECIFIED` or `DOCKET`) is separate from proceeding type (`TRIAL`, `APPEAL`, `TRIBUNAL` or `UNKNOWN`). If an official record does not label a final or interlocutory decision, the parser does not guess.
+- “Ongoing” and “appeal pending” require a case-specific official docket/hearing page retrieved within seven days plus a dated event no older than 30 days or a future hearing. Old judgments, articles and filings never establish current status. Ambiguous records are `NEEDS_REVIEW`.
+- AI, when configured for a staging run, can propose summaries and labels from the supplied document. It cannot create field evidence or verification. Dry runs never call AI because its cache and usage accounting are persistent writes.
 
-The protected `POST /api/discovery/run` endpoint seeds trusted records, rotates 12 search queries, and processes eight queued documents by default. Configure a scheduler with the same secret as `DISCOVERY_CRON_SECRET`:
+## Deduplication and review
 
-- every six hours for primary-source changes and new decisions;
-- daily for one rotating broad-search batch;
-- weekly for later-citing cases and citation-graph refreshes;
-- monthly for published-record legal-status and amendment checks.
+Before staging, the server reads every non-rejected pending case and every published case with keyset pagination, plus the static collection. Matching uses neutral citation, official URL, court-scoped file number, and normalized case name plus year. Court file numbers alone do not collapse separate orders: differing neutral citations, dates or decision types are preserved and linked as related decisions in the same proceeding. Explicit “appeal from” citations are retained as unverified appeal links for editorial confirmation.
 
-The current endpoint implements the incremental/daily batch. Weekly and monthly invocations use the same queue and should be extended with source-specific citation and consolidation adapters. Hosting does not infer a schedule from this repository; configure the schedule in the deployment platform or an external scheduler.
+Every candidate enters the existing `discovery_items` review workflow. A race-safe duplicate check is repeated at approval time. Existing reviewed records are never overwritten automatically, even by apparently stronger machine-collected data. An editor must inspect the official source, publication/privacy status, evidence, dates, relationships, summary and duplicate warning before promotion.
 
-### Local and manual runs
+## Exact commands
 
-The CLI calls the protected deployed discovery endpoint, which keeps D1/R2 access server-side:
+Commands below are PowerShell examples; quote values containing spaces. All local examples use `--dry-run`, perform zero D1/R2/AI writes, and print a JSON audit report.
 
-```bash
-npm run ingest:cases
-npm run ingest:cases -- --year=2025
-npm run ingest:cases -- --topic="duty to consult"
-npm run ingest:cases -- --ongoing
-npm run ingest:cases -- --dry-run
-npm run ingest:cases -- --backfill --runs=8
+```powershell
+# Nationwide, bounded and read-only
+npm run ingest:cases -- --nationwide --dry-run --max-pages 42 --max-requests 100 --max-depth 2 --max-duration-ms 180000 --report outputs/nationwide-dry-run.json
+
+# One province or territory (codes: BC AB SK MB ON QC NB NS PE NL YT NT NU)
+npm run ingest:cases -- --jurisdiction QC --dry-run --max-pages 20 --max-requests 50
+
+# Federal courts and tribunals
+npm run ingest:cases -- --jurisdiction CA --dry-run --max-pages 20 --max-requests 50
+
+# Historical/year search
+npm run ingest:cases -- --year 1990 --dry-run --max-pages 42 --max-requests 100
+
+# Topic and Nation/community spelling search (search vocabulary, not identity inference)
+npm run ingest:cases -- --topic "duty to consult" --nation "Haida" --dry-run --max-pages 42 --max-requests 100
+npm run ingest:cases -- --topic "obligation de consulter" --jurisdiction QC --dry-run --max-pages 20 --max-requests 50
+
+# Ongoing matters: only fresh official docket/hearing evidence qualifies
+npm run ingest:cases -- --ongoing --dry-run --max-pages 42 --max-requests 100
+
+# Include an exported read-only identity snapshot for complete local deduplication
+npm run ingest:cases -- --nationwide --dry-run --snapshot .\private\case-identities.json --max-pages 42 --max-requests 100
 ```
 
-`--dry-run` still writes fetched candidates to the isolated discovery/review queue so they can be inspected, but it does not seed or change the main `legal_records` collection. Discovery never publishes a fetched result directly. A record moves from `DISCOVERED` through extraction and verification to `REVIEW`; an authenticated editor must then publish it. Probable duplicates and records below primary verification are blocked from publication.
+Without `OPENCOURT_SEARCH_ENDPOINT` and `OPENCOURT_SEARCH_API_KEY`, the report marks broad search unavailable and uses permitted source entry points only. Search queries are still reported for audit. `--query-limit` is capped at 25; `--max-pages` at 100; `--max-requests` at 300; depth at 3; per-request timeout at 15 seconds; total duration at five minutes. The default bounded run is 42 pages, 100 requests, depth 2 and three minutes. Reports created with `--report` use exclusive creation so an earlier audit file is never overwritten.
 
-The CLI requires `OPENCOURT_DISCOVERY_URL` and `DISCOVERY_CRON_SECRET`. Server-side ingestion additionally requires the configured D1 `DB` and R2 `DOCUMENTS` bindings. `OPENC_API_KEY` is required for AI-assisted extraction, while `OPENCOURT_SEARCH_ENDPOINT` and `OPENCOURT_SEARCH_API_KEY` enable broad search and the PDF variables remain optional. The manual `OpenCourt case ingestion` GitHub Action is intentionally unscheduled and defaults to dry-run.
+A non-dry run posts to the protected existing endpoint and stages candidates in D1/R2. It requires `OPENCOURT_DISCOVERY_URL` and `DISCOVERY_CRON_SECRET`; the URL must be HTTPS. The hosted server repeats validation and all limits. Example:
 
-Duplicate checks run in this order: normalized neutral citation, court file number, normalized case name plus year, and normalized official decision URL. A probable duplicate stays in review and cannot be promoted as a second record. Published records accept an automated replacement only when the incoming verification level is strictly stronger; attached source evidence is retained with the promoted payload.
+```powershell
+npm run ingest:cases -- --nationwide --max-pages 42 --max-requests 100
+```
 
-Ongoing status is conservative. An explicit appeal or leave proceeding remains ongoing, an officially listed hearing can establish an active matter, and a released final decision is treated as decided unless an appeal is confirmed. Ambiguous status is marked for review rather than guessed.
+This command stages only. It does not add public cases. No scheduled crawler is configured or enabled by this work.
 
-### National court coverage and backfills
+## Report interpretation and limitations
 
-The built-in monitor registry covers the Supreme Court of Canada, Federal Court and Federal Court of Appeal, every province and territory, and the corresponding CanLII jurisdiction indexes. It follows public judgment, recent-decision, case-information and court-index links only when allowed by each source's robots policy. `OPENCOURT_LINKS_PER_SOURCE` controls the bounded fan-out per official index (default 50, hard maximum 100).
+- `coverage`: configured court levels, source/page counts, candidates, duplicates and verification by jurisdiction.
+- `verification`: candidate identity verification only; it is not editorial approval and does not verify a summary or Indigenous identity.
+- `duplicateScope`: explicitly says whether live D1, a supplied snapshot or only static records were checked.
+- `inaccessible`: the exact URL and reason, including manual/API-only, robots, access gate, timeout, unsupported PDF/OCR or budget stop.
+- `filtered`: candidates excluded by year, topic, Nation term, jurisdiction or unverified current status.
+- `unvisitedUrls` and `stopReason`: make the bounded run's incompleteness visible.
 
-Broad search rotates through a matrix of authoritative court domains and Indigenous-law topics, including title, section 35, treaties, consultation, reserve lands, child services, Métis and Inuit rights, self-government, taxation, harvesting, UNDRIP, Gladue, resource development and the honour of the Crown. The circular rotation prevents later courts or topics from becoming unreachable at the end of a month.
-
-`--backfill --runs=8` executes eight sequential, bounded batches with distinct query offsets. Increase `--runs` up to 20 for a deliberate historical import. It is not scheduled automatically because each batch can consume search, document-extraction and AI quotas. Every run is recorded in `scan_runs`, while failures remain isolated so one unavailable court or search query does not stop the rest of the batch.
-
-Published D1 case records are now merged into the public `/cases` database at request time. The richer hand-edited static records win when a slug already exists; newly reviewed ingested records appear automatically after promotion. If the D1 binding is temporarily unavailable, the public site falls back to its verified static collection.
-
-## AI use and cost controls
-
-All AI requests are made from `lib/server/aiDiscovery.ts` using `process.env.OPENC_API_KEY`. The request uses Structured Outputs, disables response storage, truncates supplied document text to a fixed bound, validates every response, and caches by document hash, task and model. The browser never imports the server module, receives the key, or receives it in an API response.
-
-Deterministic domain, URL and keyword filters run first. Default limits are 50 AI calls or 250,000 total tokens per UTC day, configurable with `OPENC_AI_DAILY_CALL_LIMIT` and `OPENC_AI_DAILY_TOKEN_LIMIT`. The admin queue displays calls, tokens and an estimated daily cost using the configured per-million-token rates. Actual billing depends on the selected model and current OpenAI pricing; set project-level platform spend alerts as a second control.
-
-## PDF pipeline
-
-PDF bytes are cached in R2 and retain the original URL. When `PDF_TEXT_EXTRACTOR_URL` is configured, the server sends the PDF to that operator-controlled service, accepts extracted text plus an `ocrUsed` flag, then runs normal classification and verification. Without that service, the system does not guess: it marks the extraction as pending and holds the candidate in review. The external service should attempt embedded-text extraction first and OCR only for image-only documents.
-
-## Manual configuration
-
-Copy the names from `config.example.env` into local and hosted secret management. Required runtime values are `OPENC_API_KEY`, `DISCOVERY_CRON_SECRET` and `ADMIN_REVIEW_TOKEN`. Broad internet search additionally needs a compliant search provider through `OPENCOURT_SEARCH_ENDPOINT` and `OPENCOURT_SEARCH_API_KEY`. PDF processing needs the optional extraction service. D1 and R2 are declared as `DB` and `DOCUMENTS` in `.openai/hosting.json`.
-
-Before enabling a domain, review its terms, robots policy, publication formats and rate limit in `data/trusted-domains.json`. CanLII API use must follow the applicable CanLII authorization and terms. Do not use browser scraping to work around missing API access.
-
-## Initial verified collection
-
-The first import contains the existing 12 Supreme Court of Canada records and five official federal legal instruments. Every seed links to the issuing court or Justice Laws source. It intentionally does not include uncertain Restoule, Taku River, Manitoba Métis Federation or 2024 reference metadata merely to satisfy a count; those records should be added after their source fields are fully reviewed.
-
-## Operational next steps
-
-1. Configure hosted secrets, D1/R2 resources and a scheduler.
-2. Add a licensed search API and any authorized CanLII API credentials/adapters.
-3. Deploy or select a PDF extraction/OCR service.
-4. Replace the shared editor token with identity-aware, role-based authentication before adding multiple editors.
-5. Add source-specific RSS/API/sitemap adapters, especially for provincial and territorial courts.
-6. Add a citation-provider adapter or court-specific cited-by search to strengthen `casesCiting` and citation-influence scores.
-7. Have Indigenous legal experts and affected communities review terminology, summaries and treatment of Indigenous legal orders.
+A bounded dry run is a safety and coverage sample, not proof that every historical decision was retrieved. Courts without a usable official searchable interface require targeted editorial research or a permitted search provider. PDFs require the existing operator-controlled extraction/OCR service in staging and otherwise remain inaccessible in a read-only scan. CanLII requires an authorized interface. These gaps must remain visible rather than being filled with guesses.

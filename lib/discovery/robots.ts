@@ -31,7 +31,8 @@ export function parseRobots(body: string): RobotsGroup[] {
 
 function pathMatches(rule: string, path: string): boolean {
   if (!rule) return false;
-  const escaped = rule.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\$$/, "$");
+  const anchored = rule.endsWith("$");
+  const escaped = (anchored ? rule.slice(0, -1) : rule).replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + (anchored ? "$" : "");
   return new RegExp(`^${escaped}`).test(path);
 }
 
@@ -46,7 +47,7 @@ export function isAllowedByRobots(body: string, url: string, userAgent = "OpenCo
   const rules = selected.flatMap((group) => [
     ...group.allow.map((rule) => ({ rule, allow: true })),
     ...group.disallow.map((rule) => ({ rule, allow: false })),
-  ]).filter((item) => pathMatches(item.rule, path)).sort((a, b) => b.rule.length - a.rule.length);
+  ]).filter((item) => pathMatches(item.rule, path)).sort((a, b) => b.rule.length - a.rule.length || Number(b.allow) - Number(a.allow));
   const winner = rules[0];
   const crawlDelaySeconds = Math.max(...selected.map((group) => group.crawlDelay ?? 0), 0) || undefined;
   return { allowed: winner?.allow ?? true, crawlDelaySeconds, reason: winner ? `Matched ${winner.allow ? "Allow" : "Disallow"}: ${winner.rule}` : "No matching path rule" };

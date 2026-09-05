@@ -1,6 +1,14 @@
 import { officialCaseSearchDomains } from "./officialSources.ts";
+import { courtCoverage, JURISDICTIONS, type Jurisdiction } from "./jurisdictions.ts";
 
 export const INDIGENOUS_TERMS = [
+  "autochtone", "autochtones", "première nation", "premières nations", "premieres nations", "indien", "inuits",
+  "anishinabek", "anishinaabeg", "atikamekw", "atikamek", "wolastoqey", "maliseet", "malécite", "mi'kmaq", "micmac",
+  "naskapi", "eeyou", "eyou", "algonquin", "anishinabe", "huron-wendat", "wendat", "haudenosaunee", "iroquois",
+  "tsilhqotin", "tsilhqot’in", "chilcotin", "wet’suwet’en", "wetsuweten", "gitksan", "nisgaa", "secwepemc", "shuswap",
+  "siksika", "kainai", "piikani", "stoney", "nakoda", "anishininew", "ojibway", "ojibwe", "nuxalk", "nuu-chah-nulth",
+  "tŝilhqot’in", "tahltan", "tlingit", "tlicho", "tłı̨chǫ", "gwich’in", "gwich'in", "sahtu", "dehcho", "inuvialuit",
+  "nunavik", "nunatsiavut", "nunavut tunngavik", "labrador inuit", "beothuk", "eskimo",
   "indigenous", "aboriginal", "first nation", "first nations", "métis", "metis", "inuit", "innu",
   "cree", "dene", "anishinaabe", "mi'kmaq", "mi’kmaq", "mi'kmaw", "mi’kmaw", "haida",
   "secwépemc", "nisga'a", "nisga’a", "tsilhqot'in", "tsilhqot’in", "gitxsan", "wet'suwet'en",
@@ -9,6 +17,10 @@ export const INDIGENOUS_TERMS = [
 ] as const;
 
 export const LEGAL_TERMS = [
+  "jugement", "arrêt", "décision", "appel", "tribunal", "titre ancestral", "droits ancestraux", "droits issus de traités",
+  "article 35", "obligation de consulter", "honneur de la couronne", "droits métis", "droits inuits", "chasse", "pêche",
+  "terres de réserve", "loi sur les indiens", "autonomie gouvernementale", "revendications particulières", "fiscalité",
+  "services à l’enfance", "services à l'enfance", "principe de jordan", "déclaration des nations unies", "dnudpa",
   "court", "judgment", "decision", "appeal", "neutral citation", "statute", "legislation", "regulation",
   "bill", "enacted", "amendment", "treaty", "agreement", "land claim", "specific claim",
   "comprehensive claim", "self-government", "section 35", "s. 35", "constitution act", "aboriginal title",
@@ -65,9 +77,28 @@ function circularSlice<T>(values: T[], offset: number, limit: number): T[] {
   return Array.from({ length: Math.min(limit, values.length) }, (_, index) => values[(start + index) % values.length]);
 }
 
-export interface SearchFilters { topic?: string; year?: number; ongoing?: boolean }
+export interface SearchFilters { topic?: string; year?: number; ongoing?: boolean; jurisdiction?: Jurisdiction; nation?: string }
 
 export function buildSearchQueries(offset = 0, limit = 25, filters: SearchFilters = {}): string[] {
+  const courts = courtCoverage.filter((item) => !filters.jurisdiction || item.jurisdiction === filters.jurisdiction);
+  const terms = filters.topic ? [filters.topic] : [...CASE_TOPIC_CLUSTERS, "titre ancestral droits ancestraux article 35", "droits issus de traités obligation de consulter", "droits métis inuits chasse pêche", "loi sur les Indiens terres de réserve fiscalité", "autonomie gouvernementale revendications particulières", "services à l'enfance principe de Jordan DNUDPA"];
+  const queries: string[] = [];
+  // Interleave jurisdictions before rotating topics, so the first nationwide batch is not SCC-only.
+  const scopes = [...courts.map((item) => ({ domain: new URL(item.url).hostname, jurisdiction: item.jurisdiction })),
+    ...(!filters.jurisdiction ? officialCaseSearchDomains.map((domain) => ({ domain, jurisdiction: "CA" as Jurisdiction })) : [])];
+  for (let round = 0; round < terms.length; round++) for (let index = 0; index < scopes.length; index++) {
+    const scope = scopes[index];
+    const term = terms[(round + index) % terms.length];
+    queries.push([`site:${scope.domain}`, term.replace(/["\r\n]/g, " "), filters.nation,
+      filters.jurisdiction ? JURISDICTIONS[scope.jurisdiction] : "", filters.year,
+      filters.ongoing ? "docket hearing pending rôle audience dossier en cours" : "judgment jugement"].filter(Boolean).join(" "));
+  }
+  for (const name of [...LANDMARK_SEEDS, ...INDIGENOUS_TERMS]) queries.push([`"${name}"`, filters.topic, filters.nation, filters.jurisdiction ? JURISDICTIONS[filters.jurisdiction] : "Canada", filters.year, "court tribunal jugement"].filter(Boolean).join(" "));
+  return circularSlice([...new Set(queries)], offset, Math.max(0, Math.min(limit, 100)));
+}
+
+// Retained template generator for compatibility/reference; nationwide discovery uses the roster above.
+export function buildLegacySearchQueries(offset = 0, limit = 25, filters: SearchFilters = {}): string[] {
   const suffix = [filters.year ? String(filters.year) : "", filters.ongoing ? "filed hearing appeal pending" : ""].filter(Boolean).join(" ");
   if (filters.topic?.trim()) {
     const topic = filters.topic.trim().slice(0, 100).replace(/["\r\n]/g, " ");

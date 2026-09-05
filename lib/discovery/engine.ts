@@ -15,6 +15,8 @@ import { findTrustedDomain, tierForUrl } from "./trustedDomains";
 import { classifyEvidenceSource } from "./sourcePolicy";
 import { determineVerification } from "./verification";
 import type { AiClassification, EvidenceSource, EvidenceSourceType } from "./types";
+import { runNationwideBatch } from "./runNationwide";
+import type { NationwideOptions } from "./nationwide";
 
 export const scanSchedule = {
   incremental: "Every 6 hours: new judgments, appeal decisions, legislation and high-priority sources",
@@ -161,7 +163,8 @@ async function processOne(): Promise<ProcessOutcome> {
   }
 }
 
-export async function runDiscoveryBatch(options: { queryOffset?: number; queryLimit?: number; processLimit?: number; topic?: string; year?: number; ongoing?: boolean; dryRun?: boolean; mode?: "incremental" | "broad" | "backfill" } = {}) {
+export async function runDiscoveryBatch(options: NationwideOptions & { nationwide?: boolean; processLimit?: number; mode?: "incremental" | "broad" | "backfill" } = {}) {
+  if (options.nationwide !== false || options.dryRun) return runNationwideBatch(options);
   const mode = options.mode ?? "broad";
   const defaultQueryLimit = mode === "backfill" ? 25 : mode === "incremental" ? 8 : 12;
   const defaultProcessLimit = mode === "backfill" ? 20 : 8;

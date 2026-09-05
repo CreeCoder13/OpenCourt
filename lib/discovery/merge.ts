@@ -10,13 +10,13 @@ export function mergeWithoutDowngrade<T extends Record<string, unknown>>(
   incomingLevel: VerificationLevel,
 ): T {
   const result = { ...existing };
-  const mayReplace = rank[incomingLevel] >= rank[existingLevel];
+  const mayReplace = rank[incomingLevel] > rank[existingLevel] && existing.manuallyReviewed !== true;
   for (const [key, value] of Object.entries(incoming)) {
     if (!hasValue(value)) continue;
     if (key === "verificationSources" || key === "additionalSources") {
       const prior = Array.isArray(result[key]) ? result[key] as EvidenceSource[] : [];
       const next = Array.isArray(value) ? value as EvidenceSource[] : [];
-      const byUrl = new Map([...prior, ...next].map((source) => [source.url, source]));
+      const byUrl = new Map([...next, ...prior].map((source) => [source.url, source]));
       (result as Record<string, unknown>)[key] = [...byUrl.values()];
     } else if (mayReplace || !hasValue(result[key])) {
       (result as Record<string, unknown>)[key] = value;

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { validateAiClassification } from "../lib/discovery/aiValidation.ts";
 import { parseLegalCitations } from "../lib/discovery/citations.ts";
-import { findDuplicate, titleSimilarity } from "../lib/discovery/deduplicate.ts";
+import { findDuplicate, relatedProceedings, titleSimilarity } from "../lib/discovery/deduplicate.ts";
 import { assessImpact } from "../lib/discovery/impact.ts";
 import { normalizeUrl } from "../lib/discovery/normalize.ts";
 import { DomainRateLimiter } from "../lib/discovery/rateLimiter.ts";
@@ -18,6 +18,11 @@ import { officialSourceMonitors } from "../lib/discovery/officialSources.ts";
 import { findTrustedDomain } from "../lib/discovery/trustedDomains.ts";
 import { classifyEvidenceSource } from "../lib/discovery/sourcePolicy.ts";
 import type { AiClassification } from "../lib/discovery/types.ts";
+import { courtCoverage, JURISDICTIONS } from "../lib/discovery/jurisdictions.ts";
+import { assertSourceAllowed, restrictionReason } from "../lib/discovery/crawler.ts";
+import { parseCandidate } from "../lib/discovery/parseCandidate.ts";
+import { discoverNationwide } from "../lib/discovery/nationwide.ts";
+import { validateDiscoveryOptions } from "../lib/discovery/options.ts";
 
 const aiCase: AiClassification = { relevance: "RELEVANT", confidence: 0.9, recordType: "CASE", categories: ["Section 35"], proposedTitle: "Nation v Canada", summary: "Decision summary", significanceSignals: [], nations: [], citations: ["2026 FC 1"], verificationNeeded: [], court: "Federal Court", courtFileNumber: "T-1-26", decisionDate: "2026-01-01", neutralCitation: "2026 FC 1", legislationCitation: null, parties: [], constitutionalSections: [], legislationReferenced: [], casesCited: [], treatiesReferenced: [], impactSignals: [], proceduralStage: "Decision released", latestDevelopment: "Decision released", latestDevelopmentDate: "2026-01-01", upcomingHearingDate: null };
 
@@ -78,17 +83,67 @@ test("duplicate detection uses neutral citations and guarded fuzzy matching", ()
 });
 
 test("duplicate detection follows file-number, name/year, and official-URL fallbacks", () => {
-  const existing = [{ id: "existing", caseName: "Example First Nation v Canada", courtFileNumber: "T-123-25", year: 2025, officialDecisionUrl: "https://decisions.fct-cf.gc.ca/example/" }];
-  assert.match(findDuplicate({ id: "a", courtFileNumber: "t-123-25" }, existing).reasons[0], /file number/);
+  const existing = [{ id: "existing", caseName: "Example First Nation v Canada", court: "Federal Court", courtFileNumber: "T-123-25", decisionDate: "2025-03-01", year: 2025, officialDecisionUrl: "https://decisions.fct-cf.gc.ca/example/" }];
+  assert.match(findDuplicate({ id: "a", court: "Federal Court", courtFileNumber: "t-123-25", decisionDate: "2025-03-01" }, existing).reasons[0], /file number/);
   assert.ok(findDuplicate({ id: "b", caseName: "Example First Nation v. Canada", year: 2025 }, existing).duplicateOf);
   assert.match(findDuplicate({ id: "c", officialDecisionUrl: "https://decisions.fct-cf.gc.ca/example#p1" }, existing).reasons[0], /URL/);
 });
 
 test("ongoing classification never ignores a released final decision unless an appeal is confirmed", () => {
-  assert.equal(classifyCaseStatus({ decisionDate: "2025-01-10", proceduralStage: "decision released" }).status, "DECIDED");
-  assert.equal(classifyCaseStatus({ decisionDate: "2025-01-10", latestDevelopment: "notice of appeal filed" }).status, "APPEAL_PENDING");
-  assert.equal(classifyCaseStatus({ upcomingHearingDate: "2026-10-01", proceduralStage: "hearing scheduled" }).status, "ONGOING");
+  const now = "2026-09-04T00:00:00.000Z";
+  assert.equal(classifyCaseStatus({ decisionDate: "2025-01-10", sourceType: "OFFICIAL_JUDGMENT", decisionType: "FINAL_JUDGMENT", now }).status, "DECIDED");
+  assert.equal(classifyCaseStatus({ decisionDate: "2025-01-10", latestDevelopment: "notice of appeal filed" }).status, "NEEDS_REVIEW");
+  assert.equal(classifyCaseStatus({ sourceType: "OFFICIAL_DOCKET", retrievedAt: now, latestDevelopmentDate: "2026-08-30", latestDevelopment: "notice of appeal filed", now }).status, "APPEAL_PENDING");
+  assert.equal(classifyCaseStatus({ sourceType: "OFFICIAL_DOCKET", retrievedAt: now, upcomingHearingDate: "2026-10-01", proceduralStage: "hearing scheduled", now }).status, "ONGOING");
   assert.equal(classifyCaseStatus({}).status, "NEEDS_REVIEW");
+});
+
+test("court roster covers every jurisdiction and required court level", () => {
+  for (const jurisdiction of Object.keys(JURISDICTIONS)) {
+    const levels = courtCoverage.filter((court) => court.jurisdiction === jurisdiction).map((court) => court.level);
+    assert.ok(levels.length, `missing ${jurisdiction}`);
+    if (jurisdiction !== "CA" && jurisdiction !== "NU") for (const level of ["appellate", "superior", "provincial"] as const) assert.ok(levels.includes(level), `${jurisdiction} missing ${level}`);
+    if (jurisdiction === "NU") assert.ok(levels.includes("unified"));
+  }
+});
+
+test("French and English nationwide queries are jurisdiction-filtered", () => {
+  const french = buildSearchQueries(0, 100, { jurisdiction: "QC", topic: "obligation de consulter", year: 2024 });
+  assert.ok(french.every((query) => /Quebec|Québec|qc|courdappel|courduquebec|coursuperieure/i.test(query)));
+  assert.ok(french.some((query) => query.includes("obligation de consulter")));
+  const broad = buildSearchQueries(0, 100);
+  assert.ok(broad.some((query) => /titre ancestral|droits ancestraux/.test(query)));
+});
+
+test("distinct decisions sharing a court file are linked, not collapsed", () => {
+  const old = [{ id: "a", court: "Federal Court", courtFileNumber: "T-1-25", neutralCitation: "2025 FC 1", decisionDate: "2025-01-01", decisionType: "INTERLOCUTORY" }];
+  const next = { id: "b", court: "Federal Court", courtFileNumber: "T-1-25", neutralCitation: "2025 FC 99", decisionDate: "2025-03-01", decisionType: "FINAL_JUDGMENT" };
+  assert.equal(findDuplicate(next, old).duplicateOf, undefined);
+  assert.equal(relatedProceedings(next, old)[0]?.relationship, "SAME_PROCEEDING");
+});
+
+test("restricted sources and pages are rejected before retention", () => {
+  assert.throws(() => assertSourceAllowed("https://www.canlii.org/en/ca/scc/doc/2020/2020scc1/"), /authorized|API-only/);
+  assert.match(restrictionReason('<meta name="robots" content="noindex">')!, /robots/);
+  assert.match(restrictionReason("This proceeding is subject to a publication ban")!, /publication/);
+  assert.throws(() => validateDiscoveryOptions({ maxPages: 1000 }), /maxPages/);
+});
+
+test("field evidence is retained and names are not treated as Indigenous identity", () => {
+  const html = '<html><head><title>Haida Nation v Canada, 2026 FC 10</title><meta name="lbh-title" content="Haida Nation v Canada"><meta name="lbh-citation" content="2026 FC 10"><meta name="lbh-court" content="Federal Court"><meta name="lbh-decision-date" content="2026-02-01"></head><body><h1>Final judgment: Haida Nation v Canada</h1><p>Reasons for judgment concerning section 35 and duty to consult.</p></body></html>';
+  const doc = { ...extractHtml(html), html, normalizedUrl: "https://decisions.fct-cf.gc.ca/fc-cf/decisions/en/item/10/index.do", contentHash: "hash", mimeType: "text/html", extractionMethod: "HTML_TEXT", notModified: false };
+  const result = parseCandidate(doc, { name: "Federal Court", url: "https://decisions.fct-cf.gc.ca/", jurisdiction: "CA", kind: "court", access: "public" }, "2026-09-04T00:00:00.000Z");
+  assert.equal(result?.verification, "VERIFIED_PRIMARY");
+  assert.equal(result?.extracted.IndigenousNation?.length, 0);
+  assert.equal(result?.verificationSources[0].fieldEvidence?.neutralCitation?.value, "2026 FC 10");
+});
+
+test("dry-run scanner performs no writes and reports inaccessible sources", async () => {
+  const source = { name: "Test Court", url: "https://decisions.fct-cf.gc.ca/start", jurisdiction: "CA" as const, kind: "court" as const, access: "public" as const };
+  const result = await discoverNationwide({ dryRun: true, jurisdiction: "CA", maxPages: 1, queryLimit: 0 }, { sources: [source], fetchDocument: async () => { throw new Error("robots.txt disallows access"); } });
+  assert.equal(result.productionWrites, 0);
+  assert.equal(result.inaccessible.length, 1);
+  assert.equal(result.stopReason, "PAGE_BUDGET");
 });
 
 test("parses Canadian neutral, reported and statutory citations", () => {

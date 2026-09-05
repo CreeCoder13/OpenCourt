@@ -25,6 +25,8 @@ export function classifyEvidenceSource(url: string, ai: AiClassification, truste
   const configuredRank = trusted?.evidenceRank;
   const configuredType = trusted?.sourceType;
   const isJudicialPublisher = configuredType === "OFFICIAL_JUDGMENT" || /court|tribunal/i.test(trusted?.sourceName ?? "");
+  const isDecisionDocument = /\/item\/\d+|\/doc\/|\/(?:decisions?|judgments?|jugements?|reasons?|motifs?)(?:\/|\?|$)/i.test(location)
+    && !/factum|affidavit|submission|memorandum|pleading|press|summary|cause-en-bref/i.test(location);
 
   let evidenceRank: EvidenceRank;
   let sourceType: EvidenceSourceType;
@@ -32,11 +34,13 @@ export function classifyEvidenceSource(url: string, ai: AiClassification, truste
     evidenceRank = 3; sourceType = "CANLII_JUDGMENT";
   } else if (host === "canlii.org" || host.endsWith(".canlii.org")) {
     evidenceRank = 7; sourceType = "COMMENTARY_NEWS";
-  } else if (docketPattern.test(location) && ai.recordType === "CASE" && configuredType === "OFFICIAL_JUDGMENT") {
+  } else if (configuredType === "OFFICIAL_REGULATORY_RECORD" && configuredRank) {
+    evidenceRank = configuredRank; sourceType = configuredType;
+  } else if (docketPattern.test(location) && ai.recordType === "CASE" && isJudicialPublisher && Boolean(ai.courtFileNumber)) {
     evidenceRank = 2; sourceType = "OFFICIAL_DOCKET";
-  } else if (isJudicialPublisher && ai.recordType === "CASE") {
+  } else if (isJudicialPublisher && isDecisionDocument && ai.recordType === "CASE") {
     evidenceRank = 1; sourceType = "OFFICIAL_JUDGMENT";
-  } else if (ai.recordType === "LAW") {
+  } else if (ai.recordType === "LAW" && configuredType === "OFFICIAL_LEGISLATION") {
     evidenceRank = 4; sourceType = "OFFICIAL_LEGISLATION";
   } else if (configuredType && configuredRank) {
     evidenceRank = configuredRank; sourceType = configuredType;

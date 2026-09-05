@@ -6,6 +6,7 @@ import { isAllowedByRobots } from "./robots";
 import { findTrustedDomain } from "./trustedDomains";
 import { DomainRateLimiter } from "./rateLimiter";
 import { fetchWithRetry } from "./http";
+import { CrawlerSession, assertSourceAllowed, restrictionReason } from "./crawler";
 
 const USER_AGENT = "OpenCourtBot/1.0 (+https://opencourt.ca/about; legal-research discovery)";
 const limiter = new DomainRateLimiter();
@@ -36,6 +37,7 @@ async function extractPdf(bytes: ArrayBuffer, sourceUrl: string): Promise<{ text
 }
 
 export async function fetchDocument(url: string): Promise<FetchedDocument> {
+  assertSourceAllowed(url);
   const normalizedUrl = normalizeUrl(url);
   const parsed = new URL(normalizedUrl);
   const domain = findTrustedDomain(parsed.hostname);
@@ -49,7 +51,8 @@ export async function fetchDocument(url: string): Promise<FetchedDocument> {
   let robotsBody = cachedRobots?.checkedAt && Date.now() - Date.parse(cachedRobots.checkedAt) < 86_400_000 ? (cachedRobots.body ?? "") : undefined;
   if (robotsBody === undefined) {
     const robotsUrl = `${parsed.protocol}//${parsed.host}/robots.txt`;
-    const robotsResponse = await fetchWithRetry(robotsUrl, { headers: { "User-Agent": USER_AGENT }, redirect: "follow" });
+    const robotsResponse = await fetchWithRetry(robotsUrl, { headers: { "User-Agent": USER_AGENT }, redirect: "manual" });
+    if (!robotsResponse.ok && robotsResponse.status !== 404) throw new Error(`Cannot confirm robots permission: HTTP ${robotsResponse.status}`);
     if (robotsResponse.status === 401 || robotsResponse.status === 403) {
       await saveRobotsState(parsed.hostname, "RESTRICTED");
       throw new Error("Cannot confirm crawl permission because robots.txt is access-restricted");
@@ -67,7 +70,7 @@ export async function fetchDocument(url: string): Promise<FetchedDocument> {
   const headers: Record<string, string> = { "User-Agent": USER_AGENT, Accept: "text/html,application/xhtml+xml,application/pdf,application/xml,text/xml;q=0.9,*/*;q=0.2" };
   if (cached?.etag) headers["If-None-Match"] = cached.etag;
   if (cached?.lastModified) headers["If-Modified-Since"] = cached.lastModified;
-  const response = await fetchWithRetry(normalizedUrl, { headers, redirect: "follow" });
+  const response = await fetchWithRetry(url, { headers, redirect: "manual" });
   if (response.status === 304 && cached) return { normalizedUrl, text: "", contentHash: cached.contentHash, mimeType: "", citations: [], extractionMethod: "NOT_MODIFIED", notModified: true, links: [] };
   if (!response.ok) throw new Error(`Source fetch failed with HTTP ${response.status}`);
   const length = Number(response.headers.get("content-length") ?? 0);
@@ -77,7 +80,8 @@ export async function fetchDocument(url: string): Promise<FetchedDocument> {
   const contentHash = await sha256(bytes);
   const mimeType = (response.headers.get("content-type") ?? "application/octet-stream").split(";")[0].toLowerCase();
   const r2Key = `source-cache/${contentHash}`;
-  await getDocumentBucket().put(r2Key, bytes, { httpMetadata: { contentType: mimeType }, customMetadata: { sourceUrl: normalizedUrl, fetchedAt: new Date().toISOString() } });
+  const restriction = restrictionReason(new TextDecoder().decode(bytes), response.headers);
+  if (restriction) throw new Error(restriction);
 
   let title: string | undefined;
   let text = "";
@@ -94,6 +98,22 @@ export async function fetchDocument(url: string): Promise<FetchedDocument> {
     const rawLinks = "links" in extracted ? extracted.links : [];
     links = [...new Set(rawLinks.map((link) => { try { return new URL(link, normalizedUrl).toString(); } catch { return undefined; } }).filter((link): link is string => Boolean(link)))];
   }
+  const textRestriction = restrictionReason(text);
+  if (textRestriction) throw new Error(textRestriction);
+  await getDocumentBucket().put(r2Key, bytes, { httpMetadata: { contentType: mimeType } });
   await saveSourceDocument({ contentHash, normalizedUrl, r2Key, mimeType, etag: response.headers.get("etag") ?? undefined, lastModified: response.headers.get("last-modified") ?? undefined, text, extractionMethod });
   return { normalizedUrl, title, text, contentHash, mimeType, citations, extractionMethod, notModified: false, links };
+}
+
+// Nationwide adapter shares the bounded transport; persistence is injected only in staging mode.
+export async function fetchForDiscovery(url: string, session: CrawlerSession) {
+  const policy = assertSourceAllowed(url);
+  const delay = await reserveDomainCrawlSlot(new URL(url).hostname, policy.rateLimit.perSeconds * 1000);
+  if (delay > 10000) throw new Error("Another worker owns the domain crawl slot; retry later");
+  if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+  const doc = await session.get(url);
+  const r2Key = `source-cache/${doc.contentHash}`;
+  await getDocumentBucket().put(r2Key, doc.html, { httpMetadata: { contentType: doc.mimeType } });
+  await saveSourceDocument({ contentHash: doc.contentHash, normalizedUrl: normalizeUrl(doc.normalizedUrl), r2Key, mimeType: doc.mimeType, text: doc.text, extractionMethod: doc.extractionMethod });
+  return doc;
 }

@@ -46,6 +46,7 @@ export interface EvidenceSource {
   contentHash?: string;
   supports: string[];
   authoritative: boolean;
+  fieldEvidence?: Partial<Record<EvidenceField, { value: string; quote: string; locator: string; derivedBy?: string }>>;
 }
 
 export interface ImpactAssessment {
@@ -56,6 +57,10 @@ export interface ImpactAssessment {
 }
 
 export interface CourtCaseRecord {
+  decisionType?: "FINAL_JUDGMENT" | "INTERLOCUTORY" | "DECISION_UNSPECIFIED" | "DOCKET";
+  proceedingType?: "TRIAL" | "APPEAL" | "TRIBUNAL" | "UNKNOWN";
+  relatedProceedings?: Array<{ id?: string; citation?: string; relationship: "SAME_PROCEEDING" | "APPEAL_OF"; evidenceUrl?: string; verified: boolean }>;
+  statusEvidenceDate?: string;
   id: string;
   slug: string;
   caseName: string;

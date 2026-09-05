@@ -8,6 +8,7 @@ export function normalizeUrl(input: string): string {
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new Error("Only HTTP(S) discovery URLs are supported");
   }
+  if (url.username || url.password || (url.port && url.port !== "443")) throw new Error("Credentials and nonstandard ports are not allowed in source URLs");
   url.protocol = "https:";
   url.hostname = url.hostname.toLowerCase().replace(/^www\./, "");
   url.hash = "";

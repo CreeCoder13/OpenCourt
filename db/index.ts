@@ -2,6 +2,7 @@ import "server-only";
 import { env } from "cloudflare:workers";
 import { schemaStatements } from "./schema";
 import type { DiscoveredDocument, EvidenceSource, VerificationLevel } from "../lib/discovery/types";
+import { findDuplicate, type DuplicateCandidate } from "../lib/discovery/deduplicate";
 
 type Json = Record<string, unknown>;
 
@@ -34,10 +35,10 @@ const parse = <T>(value: unknown, fallback: T): T => {
   try { return JSON.parse(value) as T; } catch { return fallback; }
 };
 
-export async function enqueueDocument(input: Omit<DiscoveredDocument, "id" | "createdAt" | "updatedAt">): Promise<boolean> {
+export async function enqueueDocument(input: Omit<DiscoveredDocument, "id" | "createdAt" | "updatedAt"> & { id?: string }): Promise<boolean> {
   await ensureSchema();
   const now = new Date().toISOString();
-  const id = crypto.randomUUID();
+  const id = input.id ?? crypto.randomUUID();
   const result = await getDb().prepare(`INSERT OR IGNORE INTO discovery_items
     (id,url,normalized_url,source_domain,source_tier,discovered_by,search_query,title,mime_type,content_hash,relevance,relevance_score,relevance_reasons_json,proposed_type,ai_confidence,extracted_json,verification,verification_sources_json,impact_score,impact_reasons_json,duplicate_of,duplicate_reasons_json,status,last_error,created_at,updated_at)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
@@ -114,13 +115,16 @@ export async function reviewItem(id: string, action: "publish" | "reject", revie
     lastVerified: now,
   };
   const title = String(extracted.caseName ?? extracted.title ?? row.title ?? "Untitled legal record");
+  if (row.proposed_type === "CASE") {
+    const duplicate = findDuplicate({ ...extracted, id, caseName: title } as DuplicateCandidate, await listAllDuplicateCandidates());
+    if (duplicate.duplicateOf) throw new Error("A matching pending or published decision now exists; resolve the duplicate in review");
+  }
   const slug = String(extracted.slug ?? title.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
   const existingRecord = await db.prepare("SELECT id,verification FROM legal_records WHERE slug=?").bind(slug).first<{ id: string; verification: VerificationLevel }>();
-  const verificationRank: Record<VerificationLevel, number> = { UNVERIFIED: 0, PARTIALLY_VERIFIED: 1, VERIFIED_PRIMARY: 2, VERIFIED_MULTIPLE: 3 };
-  if (existingRecord && verificationRank[verification] <= verificationRank[existingRecord.verification]) {
-    throw new Error("The existing reviewed record has equal or stronger verification and cannot be replaced automatically");
+  if (existingRecord) {
+    throw new Error("A reviewed record already owns this slug; automatic replacement is prohibited");
   }
-  const recordId = existingRecord?.id ?? String(extracted.id ?? crypto.randomUUID());
+  const recordId = String(extracted.id ?? crypto.randomUUID());
   const relationships = [
     ...((Array.isArray(extracted.casesCited) ? extracted.casesCited : []) as unknown[]).map((label) => ({ type: "CITES_CASE", label })),
     ...((Array.isArray(extracted.legislationReferenced) ? extracted.legislationReferenced : []) as unknown[]).map((label) => ({ type: "REFERENCES_LEGISLATION", label })),
@@ -232,6 +236,25 @@ export async function listDuplicateCandidates(limit = 1000): Promise<Array<{ id:
     const decisionDate = row.decision_date ? String(row.decision_date) : undefined;
     return { id: String(row.id), title: String(row.title), caseName: String(row.title), neutralCitation: row.citation ? String(row.citation) : undefined, courtFileNumber: typeof payload.courtFileNumber === "string" ? payload.courtFileNumber : undefined, decisionDate, year: typeof payload.year === "number" ? payload.year : decisionDate ? Number(decisionDate.slice(0, 4)) : undefined, court: row.court ? String(row.court) : undefined, officialDecisionUrl: typeof payload.officialDecisionUrl === "string" ? payload.officialDecisionUrl : undefined };
   });
+}
+
+// Exhaustive, keyset-paginated snapshot. Never silently skip older pending/published identities.
+export async function listAllDuplicateCandidates(): Promise<DuplicateCandidate[]> {
+  const records: DuplicateCandidate[] = [];
+  for (const table of ["legal_records", "discovery_items"] as const) {
+    let after = "";
+    while (true) {
+      const sql = table === "legal_records"
+        ? "SELECT id,title,payload_json AS payload FROM legal_records WHERE record_type='CASE' AND id>? ORDER BY id LIMIT 500"
+        : "SELECT id,title,extracted_json AS payload FROM discovery_items WHERE proposed_type='CASE' AND status NOT IN ('REJECTED','PUBLISHED') AND id>? ORDER BY id LIMIT 500";
+      const page = await getDb().prepare(sql).bind(after).all<{ id: string; title: string; payload: string }>();
+      for (const row of page.results) records.push({ ...parse<DuplicateCandidate>(row.payload, { id: row.id }), id: row.id, title: row.title });
+      if (records.length > 50000) throw new Error("Duplicate snapshot exceeds safe in-memory bound; run a database-backed identity review before staging");
+      if (page.results.length < 500) break;
+      after = page.results[page.results.length - 1].id;
+    }
+  }
+  return records;
 }
 
 export async function listPublishedCasePayloads(limit = 2000): Promise<Array<{ payload: Record<string, unknown>; verification: VerificationLevel; updatedAt: string }>> {
