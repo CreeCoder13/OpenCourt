@@ -16,6 +16,20 @@ export interface LegalPeriod {
   context: string;
 }
 
+export const milestoneLawPages: Record<string, string> = {
+  "royal-proclamation-1763": "royal-proclamation-1763",
+  "constitution-act-1867": "constitution-act-1867-section-91-24",
+  "indian-act-1876": "indian-act",
+  "indian-act-amendment-1927": "indian-act",
+  "indian-act-revision-1951": "indian-act",
+  "bill-c31-1985": "indian-act",
+  "section-35-1982": "constitution-act-1982-section-35",
+  "first-nations-land-management-1999": "framework-agreement-first-nation-land-management-act",
+  "specific-claims-tribunal-2008": "specific-claims-tribunal-act",
+  "indigenous-languages-act-2019": "indigenous-languages-act",
+  "undrip-act-2021": "united-nations-declaration-on-the-rights-of-indigenous-peoples-act",
+};
+
 export const legalPeriods: LegalPeriod[] = [
   { startYear: 1750, endYear: 1799, label: "1750–1799", context: "Early Crown instruments and the developing treaty relationship." },
   { startYear: 1800, endYear: 1849, label: "1800–1849", context: "Colonial administration expanded, while Indigenous laws and treaty relationships continued." },

@@ -1,19 +1,5 @@
-import Link from "next/link";
-import { legalMilestones, legalPeriods } from "../data/legalMilestones";
-
-const milestoneLawPages: Record<string, string> = {
-  "royal-proclamation-1763": "royal-proclamation-1763",
-  "constitution-act-1867": "constitution-act-1867-section-91-24",
-  "indian-act-1876": "indian-act",
-  "indian-act-amendment-1927": "indian-act",
-  "indian-act-revision-1951": "indian-act",
-  "bill-c31-1985": "indian-act",
-  "section-35-1982": "constitution-act-1982-section-35",
-  "first-nations-land-management-1999": "framework-agreement-first-nation-land-management-act",
-  "specific-claims-tribunal-2008": "specific-claims-tribunal-act",
-  "indigenous-languages-act-2019": "indigenous-languages-act",
-  "undrip-act-2021": "united-nations-declaration-on-the-rights-of-indigenous-peoples-act",
-};
+import { legalMilestones, legalPeriods, milestoneLawPages } from "../data/legalMilestones";
+import { lawPath } from "../data/navigation";
 
 export function LegalHistoryTimeline() {
   return <section className="legal-history" aria-labelledby="legal-history-title">
@@ -32,7 +18,7 @@ export function LegalHistoryTimeline() {
             <header><div><span>{period.label}</span><h3 id={`period-title-${period.startYear}`}>{period.context}</h3></div><small>{milestones.length} verified {milestones.length === 1 ? "milestone" : "milestones"}</small></header>
             {milestones.length ? <div className="legal-milestone-grid">{milestones.map((milestone) => <details className="legal-milestone" key={milestone.id}>
               <summary><span>{milestone.year}</span><div><small>{milestone.type}</small><h4>{milestone.title}</h4><p>{milestone.shortSummary}</p></div><b aria-hidden="true">+</b></summary>
-              <div className="legal-milestone-more"><h5>Why it matters</h5><p>{milestone.significance}</p>{milestoneLawPages[milestone.id] && <Link href={`/laws/${milestoneLawPages[milestone.id]}`}>Open the OpenCourt law page →</Link>}<footer><a href={milestone.source.url} target="_blank" rel="noreferrer">View official source ↗</a><span>{milestone.source.publisher} · Verified {milestone.lastVerified}</span></footer></div>
+              <div className="legal-milestone-more"><h5>Why it matters</h5><p>{milestone.significance}</p>{milestoneLawPages[milestone.id] && <a href={lawPath(milestoneLawPages[milestone.id])}>Open the OpenCourt law page →</a>}<footer><a href={milestone.source.url} target="_blank" rel="noreferrer">View official source ↗</a><span>{milestone.source.publisher} · Verified {milestone.lastVerified}</span></footer></div>
             </details>)}</div> : <div className="legal-period-empty"><span>Research note</span><p>No milestone is published for this period yet. New entries will appear only after their dates, legal effect, and sources are verified.</p></div>}
           </div>
         </section>;

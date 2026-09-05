@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 
 import { laws } from "../data/laws.ts";
+import { legalMilestones, milestoneLawPages } from "../data/legalMilestones.ts";
 import { lawPath } from "../data/navigation.ts";
 
 test("every published law has a unique dedicated route", () => {
@@ -20,6 +21,20 @@ test("View Law Page uses reliable native navigation", () => {
   const catalogue = readFileSync(new URL("../app/laws/page.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(catalogue, /from ["']next\/link["']/);
   assert.match(catalogue, /<a\b[^>]*className="law-card-action"[^>]*href=\{lawPath\(law\.slug\)\}/);
+});
+
+test("timeline law-page actions use native links to published OpenCourt pages", () => {
+  const timeline = readFileSync(new URL("../components/LegalHistoryTimeline.tsx", import.meta.url), "utf8");
+  const publishedLawSlugs = new Set(laws.map((law) => law.slug));
+  const milestoneIds = new Set(legalMilestones.map((milestone) => milestone.id));
+
+  assert.doesNotMatch(timeline, /from ["']next\/link["']/);
+  assert.match(timeline, /<a\b[^>]*href=\{lawPath\(milestoneLawPages\[milestone\.id\]\)\}/);
+
+  for (const [milestoneId, lawSlug] of Object.entries(milestoneLawPages)) {
+    assert.ok(milestoneIds.has(milestoneId), `Timeline link references missing milestone ${milestoneId}`);
+    assert.ok(publishedLawSlugs.has(lawSlug), `Timeline link references missing law page ${lawSlug}`);
+  }
 });
 
 test("every law supplies the content required by the in-depth page", () => {
