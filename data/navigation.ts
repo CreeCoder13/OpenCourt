@@ -15,3 +15,5 @@ export const homeSectionLinks = {
 export const casePath = (slug: string) => `/cases/${slug}` as const;
 
 export const caseSummaryPath = (slug: string) => `${casePath(slug)}#analysis` as const;
+
+export const lawPath = (slug: string) => `/laws/${slug}` as const;
